@@ -876,7 +876,7 @@ function renderTasks() {
     actions += '<button class="task-action-btn" data-action="delete" data-id="' + escapeHtml(t.id) + '" title="Hapus" aria-label="Hapus">' + iconDelete() + '</button>';
 
     return '<div class="task-item' + (t.done ? ' done' : '') + '" data-id="' + escapeHtml(t.id) + '">' +
-      '<div class="task-checkbox" data-action="toggle" data-id="' + escapeHtml(t.id) + '" role="checkbox" aria-checked="' + t.done + '" tabindex="0">' +
+      '<div class="task-checkbox" data-action="toggle" data-id="' + escapeHtml(t.id) + '" role="checkbox" aria-checked="' + t.done + '" aria-label="' + escapeHtml((t.done ? 'Tandai belum selesai: ' : 'Selesaikan: ') + t.title) + '" tabindex="0">' +
       '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 6l3 3 5-5"/></svg>' +
       '</div>' +
       '<div class="task-item-content">' +
@@ -1273,7 +1273,11 @@ function setupEventListeners() {
       var target = e.target.closest('[data-action="toggle"]');
       if (target) {
         e.preventDefault();
-        Tasks.toggle(target.dataset.id);
+        var taskId = target.dataset.id;
+        Tasks.toggle(taskId);
+        var row = Array.from(document.querySelectorAll('.task-item')).find(function(item) { return item.dataset.id === taskId; });
+        var nextControl = row ? row.querySelector('[data-action="toggle"]') : document.querySelector('.filter-btn.active');
+        if (nextControl) nextControl.focus();
       }
     }
   });
