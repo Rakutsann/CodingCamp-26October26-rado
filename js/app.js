@@ -246,8 +246,10 @@ function updateGreeting() {
   var now = new Date();
   var h = now.getHours();
   var name = state.settings.name || 'Rado';
-  document.getElementById('greeting').textContent = getGreetingPrefix(h) + ', ' + name + '.';
-  updateAvatar(name);
+  var greeting = getGreetingPrefix(h) + ', ' + name + '.';
+  var greetingEl = document.getElementById('greeting');
+  if (greetingEl.textContent !== greeting) greetingEl.textContent = greeting;
+  if (document.getElementById('sidebarUserName').textContent !== name) updateAvatar(name);
 }
 
 function updateAvatar(name) {
@@ -267,6 +269,7 @@ function updateDate() {
 
 function updateClock() {
   var now = new Date();
+  updateGreeting();
   var h = pad(now.getHours());
   var m = pad(now.getMinutes());
   var s = pad(now.getSeconds());
