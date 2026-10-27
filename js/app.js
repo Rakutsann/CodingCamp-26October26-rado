@@ -146,18 +146,8 @@ function validateAndFill(data) {
     sessions: Array.isArray(data.sessions) ? data.sessions.filter(isValidSession).map(normalizeSession) : [],
     timer: data.timer && typeof data.timer === 'object' ? normalizeTimer(data.timer) : def.timer
   };
-  // Timer: preserve running/paused, only sync idle to settings
-  var t = result.timer;
-  if (t.running && t.endAt) {
-    // Running: keep as-is
-  } else if (!t.running && t.remaining > 0 && t.remaining < t.total) {
-    // Paused (started, not finished): keep remaining and total
-  } else {
-    // Idle or completed: sync to current settings
-    t.total = t.mode === 'focus' ? result.settings.focusMinutes * 60 : result.settings.breakMinutes * 60;
-    t.remaining = t.total;
-    t.endAt = null;
-  }
+  // A saved timer belongs to its session, including a paused or completed one.
+  // Applying new durations is handled by settings/reset, never by loading data.
   return result;
 }
 
@@ -419,6 +409,7 @@ var Timer = {
     stopTimerTick();
     t.id = generateId(); // new session ID
     t.running = false;
+    t.total = t.mode === 'focus' ? state.settings.focusMinutes * 60 : state.settings.breakMinutes * 60;
     t.remaining = t.total;
     t.endAt = null;
     Store.save();
