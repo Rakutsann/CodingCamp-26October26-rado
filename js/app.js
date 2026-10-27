@@ -13,6 +13,7 @@ var dateCheckInterval = null;
 var audioCtx = null;
 var undoDelete = null; // { task, timeoutId }
 var lastDateStr = '';
+var storageReadBlocked = false;
 
 // ==================== DEFAULT STATE ====================
 function defaultState() {
@@ -59,26 +60,47 @@ var Store = {
       var data = JSON.parse(raw);
       return migrate(data);
     } catch(e) {
-      console.error('Load error:', e);
+      storageReadBlocked = true;
+      setStorageStatus(false);
+      setTimeout(function() {
+        showToast('Data browser tidak terbaca. Perubahan sementara belum disimpan. Pulihkan cadangan melalui Impor.');
+      }, 0);
       return defaultState();
     }
   },
   save: function() {
+    if (storageReadBlocked) {
+      showToast('Data lama tetap disimpan. Pulihkan cadangan melalui Impor sebelum menyimpan perubahan.');
+      return false;
+    }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      setStorageStatus(true);
       return true;
     } catch(e) {
+      setStorageStatus(false);
       showToast('Penyimpanan browser gagal. Coba periksa ruang penyimpanan.');
       return false;
     }
   }
 };
 
+function setStorageStatus(saved) {
+  var indicator = document.getElementById('storageIndicator');
+  if (!indicator) return;
+  indicator.querySelector('.storage-text').textContent = saved ? 'Tersimpan' : 'Belum tersimpan';
+  indicator.title = saved ? 'Data tersimpan di browser ini' : 'Perubahan belum tersimpan. Ekspor cadangan sebelum menutup halaman.';
+}
+
 // ==================== MIGRATION ====================
 function migrate(data) {
-  if (!data || typeof data !== 'object') return defaultState();
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid stored data');
+  if (data.version !== undefined && data.version !== 0 && data.version !== 1) throw new Error('Unsupported data version');
   // Check for old format (no version field or version mismatch)
   if (!data.version || data.version !== 1) {
+    var legacySettings = data.settings;
+    var knownLegacy = legacySettings && (legacySettings.focusDuration !== undefined || legacySettings.breakDuration !== undefined || legacySettings.dailyTarget !== undefined);
+    if (!knownLegacy && !Array.isArray(data.shortcuts) && !(data.history && Array.isArray(data.history.sessions))) throw new Error('Unknown stored data');
     // Try to migrate old fields
     var migrated = defaultState();
     if (data.settings) {
@@ -99,8 +121,8 @@ function migrate(data) {
           category: t.category || 'personal',
           priority: t.priority === 'tinggi' ? 'high' : (t.priority === 'rendah' ? 'low' : (t.priority || 'normal')),
           done: t.completed || t.done || false,
-          createdAt: t.createdAt || new Date().toISOString(),
-          completedAt: t.completedAt || null
+          createdAt: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString(),
+          completedAt: t.completedAt ? new Date(t.completedAt).toISOString() : null
         };
       });
     }
@@ -112,7 +134,7 @@ function migrate(data) {
       migrated.links = data.links;
     }
     if (data.history && data.history.sessions && Array.isArray(data.history.sessions)) {
-      migrated.sessions = data.history.sessions.map(function(s) {
+      migrated.sessions = data.history.sessions.filter(function(s) { return s.type !== 'break'; }).map(function(s) {
         return {
           id: s.id || generateId(),
           endedAt: s.completedAt ? new Date(s.completedAt).toISOString() : new Date().toISOString(),
@@ -123,31 +145,34 @@ function migrate(data) {
     } else if (data.sessions && Array.isArray(data.sessions)) {
       migrated.sessions = data.sessions;
     }
-    return migrated;
+    migrated.timer.total = migrated.settings.focusMinutes * 60;
+    migrated.timer.remaining = migrated.timer.total;
+    return validateAndFill(migrated);
   }
   // Version 1: validate and fill missing fields
   return validateAndFill(data);
 }
 
 function validateAndFill(data) {
-  var def = defaultState();
+  if (!validateBackup(data)) throw new Error('Invalid data');
   var result = {
     version: 1,
     settings: {
-      name: (data.settings && data.settings.name) || def.settings.name,
-      focusMinutes: clamp((data.settings && data.settings.focusMinutes) || def.settings.focusMinutes, 1, 120),
-      breakMinutes: clamp((data.settings && data.settings.breakMinutes) || def.settings.breakMinutes, 1, 60),
-      goal: [2,4,6,8].indexOf((data.settings && data.settings.goal) || def.settings.goal) >= 0 ? data.settings.goal : def.settings.goal,
-      theme: ['light','dark','system'].indexOf((data.settings && data.settings.theme) || def.settings.theme) >= 0 ? data.settings.theme : def.settings.theme,
-      sound: (data.settings && typeof data.settings.sound === 'boolean') ? data.settings.sound : def.settings.sound
+      name: data.settings.name.trim(),
+      focusMinutes: data.settings.focusMinutes,
+      breakMinutes: data.settings.breakMinutes,
+      goal: data.settings.goal,
+      theme: data.settings.theme,
+      sound: data.settings.sound
     },
-    tasks: Array.isArray(data.tasks) ? data.tasks.filter(isValidTask).map(normalizeTask) : [],
-    links: Array.isArray(data.links) ? data.links.filter(isValidLink).map(normalizeLink) : def.links,
-    sessions: Array.isArray(data.sessions) ? data.sessions.filter(isValidSession).map(normalizeSession) : [],
-    timer: data.timer && typeof data.timer === 'object' ? normalizeTimer(data.timer) : def.timer
+    tasks: data.tasks.map(normalizeTask),
+    links: data.links.map(normalizeLink),
+    sessions: data.sessions.map(normalizeSession),
+    timer: normalizeTimer(data.timer)
   };
   // A saved timer belongs to its session, including a paused or completed one.
   // Applying new durations is handled by settings/reset, never by loading data.
+  if (!result.tasks.some(function(t) { return t.id === result.timer.taskId && !t.done; })) result.timer.taskId = '';
   return result;
 }
 
@@ -155,7 +180,7 @@ function isValidTask(t) { return t && typeof t.title === 'string' && t.title.tri
 function normalizeTask(t) {
   return {
     id: t.id || generateId(),
-    title: t.title.slice(0, 160),
+    title: t.title.trim(),
     category: ['personal','belajar','kerja'].indexOf(t.category) >= 0 ? t.category : 'personal',
     priority: ['high','normal','low'].indexOf(t.priority) >= 0 ? t.priority : 'normal',
     done: !!t.done,
@@ -164,7 +189,7 @@ function normalizeTask(t) {
   };
 }
 function isValidLink(l) { return l && typeof l.name === 'string' && typeof l.url === 'string'; }
-function normalizeLink(l) { return { id: l.id || generateId(), name: l.name.slice(0, 40), url: l.url }; }
+function normalizeLink(l) { return { id: l.id, name: l.name.trim(), url: Links.validateUrl(l.url) }; }
 function isValidSession(s) { return s && typeof s.id === 'string' && typeof s.endedAt === 'string'; }
 function normalizeSession(s) {
   return {
@@ -618,16 +643,16 @@ var Stats = {
 // ==================== LINKS ====================
 var Links = {
   validateUrl: function(url) {
-    if (!url) return null;
+    if (typeof url !== 'string' || !url) return null;
     url = url.trim();
     if (!url) return null;
     // Add protocol if missing
-    if (!/^https?:\/\//i.test(url)) {
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
       url = 'https://' + url;
     }
     try {
       var u = new URL(url);
-      if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+      if ((u.protocol !== 'http:' && u.protocol !== 'https:') || !u.hostname || u.username || u.password) return null;
       return u.href;
     } catch(e) {
       return null;
@@ -714,7 +739,7 @@ var Backup = {
     var snapshot = JSON.parse(JSON.stringify(state));
     var t = snapshot.timer;
     if (t.running && t.endAt) {
-      t.remaining = Math.max(0, Math.round((t.endAt - Date.now()) / 1000));
+      t.remaining = Math.max(0, (t.endAt - Date.now()) / 1000);
       t.running = false;
       t.endAt = null;
     }
@@ -742,14 +767,23 @@ var Backup = {
         if (!validateBackup(data)) throw new Error('Invalid data');
         var validated = validateAndFill(data);
         // Show confirmation
-        var msg = 'Impor ' + validated.tasks.length + ' tugas, ' + validated.links.length + ' pintasan, ' + validated.sessions.length + ' sesi?';
+        var msg = 'Impor ' + validated.tasks.length + ' tugas, ' + validated.links.length + ' pintasan, ' + validated.sessions.length + ' sesi? Data saat ini akan diganti.';
         showToast(msg, 'Konfirmasi', function() {
+          var previousState = state;
+          var previousBlocked = storageReadBlocked;
           state = validated;
           // Reset timer to focus idle
           state.timer = defaultState().timer;
           state.timer.total = state.settings.focusMinutes * 60;
           state.timer.remaining = state.timer.total;
-          Store.save();
+          storageReadBlocked = false;
+          if (!Store.save()) {
+            state = previousState;
+            storageReadBlocked = previousBlocked;
+            showToast('Cadangan belum dipulihkan karena penyimpanan gagal. Data sebelumnya tetap tersedia.');
+            return;
+          }
+          Theme.apply();
           renderAll();
           showToast('Data berhasil dipulihkan.');
         });
@@ -836,13 +870,13 @@ function renderTasks() {
     var focusCount = Tasks.focusCount(t.id);
     var actions = '';
     if (!t.done) {
-      actions += '<button class="task-action-btn" data-action="focus" data-id="' + t.id + '" title="Fokus" aria-label="Fokus">' + iconTimer() + '</button>';
+      actions += '<button class="task-action-btn" data-action="focus" data-id="' + escapeHtml(t.id) + '" title="Fokus" aria-label="Fokus">' + iconTimer() + '</button>';
     }
-    actions += '<button class="task-action-btn" data-action="edit" data-id="' + t.id + '" title="Edit" aria-label="Edit">' + iconEdit() + '</button>';
-    actions += '<button class="task-action-btn" data-action="delete" data-id="' + t.id + '" title="Hapus" aria-label="Hapus">' + iconDelete() + '</button>';
+    actions += '<button class="task-action-btn" data-action="edit" data-id="' + escapeHtml(t.id) + '" title="Edit" aria-label="Edit">' + iconEdit() + '</button>';
+    actions += '<button class="task-action-btn" data-action="delete" data-id="' + escapeHtml(t.id) + '" title="Hapus" aria-label="Hapus">' + iconDelete() + '</button>';
 
-    return '<div class="task-item' + (t.done ? ' done' : '') + '" data-id="' + t.id + '">' +
-      '<div class="task-checkbox" data-action="toggle" data-id="' + t.id + '" role="checkbox" aria-checked="' + t.done + '" tabindex="0">' +
+    return '<div class="task-item' + (t.done ? ' done' : '') + '" data-id="' + escapeHtml(t.id) + '">' +
+      '<div class="task-checkbox" data-action="toggle" data-id="' + escapeHtml(t.id) + '" role="checkbox" aria-checked="' + t.done + '" tabindex="0">' +
       '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 6l3 3 5-5"/></svg>' +
       '</div>' +
       '<div class="task-item-content">' +
@@ -872,7 +906,7 @@ function updateTimerTaskSelect() {
   var options = '<option value="">Fokus tanpa tugas tertentu</option>';
   state.tasks.filter(function(x) { return !x.done; }).forEach(function(task) {
     var sel = task.id === currentTaskId ? ' selected' : '';
-    options += '<option value="' + task.id + '"' + sel + '>' + escapeHtml(task.title) + '</option>';
+    options += '<option value="' + escapeHtml(task.id) + '"' + sel + '>' + escapeHtml(task.title) + '</option>';
   });
   select.innerHTML = options;
   select.value = currentTaskId;
@@ -921,7 +955,7 @@ function renderTimer() {
   var options = '<option value="">Fokus tanpa tugas tertentu</option>';
   state.tasks.filter(function(x) { return !x.done; }).forEach(function(task) {
     var sel = task.id === currentTaskId ? ' selected' : '';
-    options += '<option value="' + task.id + '"' + sel + '>' + escapeHtml(task.title) + '</option>';
+    options += '<option value="' + escapeHtml(task.id) + '"' + sel + '>' + escapeHtml(task.title) + '</option>';
   });
   select.innerHTML = options;
   select.value = currentTaskId;
@@ -982,14 +1016,14 @@ function renderLinks() {
         '</div>';
     } else {
       var monogram = colors.monogram || l.name.charAt(0).toUpperCase();
-      icon = '<div class="shortcut-icon" style="background:' + colors.bg + ';color:' + colors.text + ';border-color:#e8e9e1;">' + monogram + '</div>';
+      icon = '<div class="shortcut-icon" style="background:' + colors.bg + ';color:' + colors.text + ';border-color:#e8e9e1;">' + escapeHtml(monogram) + '</div>';
     }
-    return '<div class="shortcut-card" data-url="' + escapeHtml(l.url) + '" data-id="' + l.id + '">' +
+    return '<div class="shortcut-card" data-url="' + escapeHtml(l.url) + '" data-id="' + escapeHtml(l.id) + '">' +
       icon +
       '<div class="shortcut-name">' + escapeHtml(l.name) + '</div>' +
       '<div class="shortcut-actions">' +
-      '<button class="shortcut-action-btn" data-link-action="edit" data-id="' + l.id + '" aria-label="Edit">' + iconEdit() + '</button>' +
-      '<button class="shortcut-action-btn" data-link-action="delete" data-id="' + l.id + '" aria-label="Hapus">' + iconDelete() + '</button>' +
+      '<button class="shortcut-action-btn" data-link-action="edit" data-id="' + escapeHtml(l.id) + '" aria-label="Edit">' + iconEdit() + '</button>' +
+      '<button class="shortcut-action-btn" data-link-action="delete" data-id="' + escapeHtml(l.id) + '" aria-label="Hapus">' + iconDelete() + '</button>' +
       '</div>' +
       '</div>';
   }).join('');
@@ -1008,9 +1042,9 @@ function iconDelete() {
 }
 
 function escapeHtml(str) {
-  var div = document.createElement('div');
-  div.textContent = str || '';
-  return div.innerHTML;
+  return String(str == null ? '' : str).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
 }
 
 // ==================== FOCUS MODE ====================
@@ -1421,82 +1455,70 @@ function setupEventListeners() {
 }
 
 function isValidISODate(str) {
-  if (typeof str !== 'string' || str.length === 0) return false;
-  var d = new Date(str);
-  return !isNaN(d.getTime());
+  if (typeof str !== 'string') return false;
+  var parts = str.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/);
+  if (!parts || !Number.isFinite(new Date(str).getTime())) return false;
+  var year = Number(parts[1]), month = Number(parts[2]), day = Number(parts[3]);
+  var leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  var days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1] && Number(parts[4]) < 24 && Number(parts[5]) < 60 && Number(parts[6]) < 60;
+}
+
+function validId(id) {
+  return typeof id === 'string' && id.trim().length > 0 && id.length <= 100 && !/[\u0000-\u001f\u007f]/.test(id);
+}
+
+function integerInRange(value, min, max) {
+  return Number.isInteger(value) && value >= min && value <= max;
 }
 
 function validateBackup(data) {
-  if (!data || typeof data !== 'object') return false;
-  if (data.version !== 1) return false;
+  if (!data || typeof data !== 'object' || Array.isArray(data) || data.version !== 1) return false;
   var s = data.settings;
-  if (!s || typeof s !== 'object') return false;
-  if (typeof s.name !== 'string' || s.name.length === 0 || s.name.length > 100) return false;
-  if (typeof s.focusMinutes !== 'number' || s.focusMinutes < 1 || s.focusMinutes > 120) return false;
-  if (typeof s.breakMinutes !== 'number' || s.breakMinutes < 1 || s.breakMinutes > 60) return false;
-  if (typeof s.goal !== 'number' || [2,4,6,8].indexOf(s.goal) < 0) return false;
-  if (typeof s.theme !== 'string' || ['light','dark','system'].indexOf(s.theme) < 0) return false;
-  if (typeof s.sound !== 'boolean') return false;
-  if (!Array.isArray(data.tasks)) return false;
-  var taskIds = {};
+  if (!s || typeof s !== 'object' || typeof s.name !== 'string' || !s.name.trim() || s.name.length > 32) return false;
+  if (!integerInRange(s.focusMinutes, 1, 120) || !integerInRange(s.breakMinutes, 1, 60)) return false;
+  if ([2, 4, 6, 8].indexOf(s.goal) < 0 || ['light', 'dark', 'system'].indexOf(s.theme) < 0 || typeof s.sound !== 'boolean') return false;
+  if (!Array.isArray(data.tasks) || data.tasks.length > 3000 || !Array.isArray(data.links) || data.links.length > 100 || !Array.isArray(data.sessions) || data.sessions.length > 10000) return false;
+
+  var taskIds = Object.create(null);
   for (var i = 0; i < data.tasks.length; i++) {
-    var tk = data.tasks[i];
-    if (!tk || typeof tk !== 'object') return false;
-    if (typeof tk.id !== 'string' || tk.id.length === 0) return false;
-    if (taskIds[tk.id]) return false;
-    taskIds[tk.id] = true;
-    if (typeof tk.title !== 'string' || tk.title.trim().length === 0 || tk.title.length > 160) return false;
-    if (typeof tk.category !== 'string' || ['personal','belajar','kerja'].indexOf(tk.category) < 0) return false;
-    if (typeof tk.priority !== 'string' || ['high','normal','low'].indexOf(tk.priority) < 0) return false;
-    if (typeof tk.done !== 'boolean') return false;
-    if (typeof tk.createdAt !== 'string' || !isValidISODate(tk.createdAt)) return false;
-    if (tk.completedAt !== null && (typeof tk.completedAt !== 'string' || !isValidISODate(tk.completedAt))) return false;
+    var task = data.tasks[i];
+    if (!task || !validId(task.id) || taskIds[task.id]) return false;
+    taskIds[task.id] = true;
+    if (typeof task.title !== 'string' || !task.title.trim() || task.title.length > 160) return false;
+    if (['personal', 'belajar', 'kerja'].indexOf(task.category) < 0 || ['high', 'normal', 'low'].indexOf(task.priority) < 0 || typeof task.done !== 'boolean') return false;
+    if (!isValidISODate(task.createdAt)) return false;
+    if (task.done ? !isValidISODate(task.completedAt) : task.completedAt !== null) return false;
   }
-  if (!Array.isArray(data.links)) return false;
-  var linkIds = {};
-  for (var i = 0; i < data.links.length; i++) {
-    var l = data.links[i];
-    if (!l || typeof l !== 'object') return false;
-    if (typeof l.id !== 'string' || l.id.length === 0) return false;
-    if (linkIds[l.id]) return false;
-    linkIds[l.id] = true;
-    if (typeof l.name !== 'string' || l.name.length === 0 || l.name.length > 100) return false;
-    if (typeof l.url !== 'string' || l.url.length === 0) return false;
-    try {
-      var testUrl = /^https?:\/\//i.test(l.url) ? l.url : 'https://' + l.url;
-      var u = new URL(testUrl);
-      if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
-    } catch(e) { return false; }
+
+  var linkIds = Object.create(null);
+  for (var j = 0; j < data.links.length; j++) {
+    var link = data.links[j];
+    if (!link || !validId(link.id) || linkIds[link.id]) return false;
+    linkIds[link.id] = true;
+    if (typeof link.name !== 'string' || !link.name.trim() || link.name.length > 40 || typeof link.url !== 'string' || link.url.length > 2048 || !Links.validateUrl(link.url)) return false;
   }
-  if (!Array.isArray(data.sessions)) return false;
-  var sessionIds = {};
-  for (var i = 0; i < data.sessions.length; i++) {
-    var sess = data.sessions[i];
-    if (!sess || typeof sess !== 'object') return false;
-    if (typeof sess.id !== 'string' || sess.id.length === 0) return false;
-    if (sessionIds[sess.id]) return false;
-    sessionIds[sess.id] = true;
-    if (typeof sess.endedAt !== 'string' || !isValidISODate(sess.endedAt)) return false;
-    if (typeof sess.seconds !== 'number' || sess.seconds < 0 || sess.seconds > 86400) return false;
-    if (typeof sess.taskId !== 'string') return false;
+
+  var sessionIds = Object.create(null);
+  for (var k = 0; k < data.sessions.length; k++) {
+    var session = data.sessions[k];
+    if (!session || !validId(session.id) || sessionIds[session.id]) return false;
+    sessionIds[session.id] = true;
+    if (!isValidISODate(session.endedAt) || !integerInRange(session.seconds, 60, 7200)) return false;
+    if (session.taskId !== '' && !validId(session.taskId)) return false;
   }
-  var tm = data.timer;
-  if (!tm || typeof tm !== 'object') return false;
-  if (typeof tm.id !== 'string') return false;
-  if (typeof tm.mode !== 'string' || ['focus','break'].indexOf(tm.mode) < 0) return false;
-  if (typeof tm.total !== 'number' || tm.total < 0) return false;
-  if (typeof tm.remaining !== 'number' || tm.remaining < 0) return false;
-  if (typeof tm.running !== 'boolean') return false;
-  if (tm.endAt !== null && typeof tm.endAt !== 'number') return false;
-  if (typeof tm.taskId !== 'string') return false;
+
+  var timer = data.timer;
+  if (!timer || !validId(timer.id) || ['focus', 'break'].indexOf(timer.mode) < 0) return false;
+  if (!integerInRange(timer.total, 60, timer.mode === 'break' ? 3600 : 7200)) return false;
+  if (!Number.isFinite(timer.remaining) || timer.remaining < 0 || timer.remaining > timer.total || typeof timer.running !== 'boolean') return false;
+  if (timer.running ? !Number.isFinite(timer.endAt) || timer.endAt <= 0 || !Number.isFinite(new Date(timer.endAt).getTime()) : timer.endAt !== null) return false;
+  if (timer.taskId !== '' && !validId(timer.taskId)) return false;
   return true;
 }
 
 function validateState(data) {
-  if (!data || typeof data !== 'object') return false;
-  if (!data.settings || typeof data.settings !== 'object') return false;
-  if (typeof data.settings.name !== 'string') return false;
-  return true;
+  return validateBackup(data);
 }
 
 // ==================== INIT ====================
