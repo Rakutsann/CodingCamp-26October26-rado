@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ruang. — Satu hal dalam satu waktu</title>
+  <meta name="description" content="Ruang — To-Do List Life Dashboard. Satu hal dalam satu waktu.">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar" id="sidebar">
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(14 14) rotate(12)">
+          <rect x="-7" y="-7" width="6" height="6" rx="1.5" fill="#3f5d4b"/>
+          <rect x="0" y="-7" width="6" height="6" rx="1.5" fill="#3f5d4b"/>
+          <rect x="-7" y="0" width="6" height="6" rx="1.5" fill="#3f5d4b"/>
+          <rect x="0" y="0" width="6" height="6" rx="1.5" fill="#ba785a"/>
+        </g>
+      </svg>
+      <span class="logo-text">ruang<span class="logo-dot">.</span></span>
+    </div>
+
+    <!-- Menu -->
+    <nav class="sidebar-menu">
+      <a href="#ringkasan" class="menu-item active" data-section="ringkasan">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/>
+          <rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/>
+        </svg>
+        <span class="menu-text">Ringkasan</span>
+      </a>
+      <a href="#tugas" class="menu-item" data-section="tugas">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 3h10v14l-5-3-5 3V3z"/><path d="M8 8l2 2 4-4"/>
+        </svg>
+        <span class="menu-text">Tugas hari ini</span>
+        <span class="menu-badge" id="menuTaskCount">0</span>
+      </a>
+      <a href="#fokus" class="menu-item" data-section="fokus">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2.5"/>
+        </svg>
+        <span class="menu-text">Ruang fokus</span>
+      </a>
+      <a href="#aktivitas" class="menu-item" data-section="aktivitas">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 17V8m5 9V4m5 13v-6m5 6V7"/>
+        </svg>
+        <span class="menu-text">Aktivitas</span>
+      </a>
+      <a href="#pintasan" class="menu-item" data-section="pintasan">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 7h10M5 7l3-3m-3 3l3 3M15 13H5m10 0l-3-3m3 3l-3 3"/>
+        </svg>
+        <span class="menu-text">Pintasan</span>
+      </a>
+    </nav>
+
+    <!-- Bottom section -->
+    <div class="sidebar-bottom">
+      <button class="menu-item" id="btnSettings" aria-label="Pengaturan">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="2.5"/><path d="M10 2v2m0 12v2M2 10h2m12 0h2M4.5 4.5l1.4 1.4m8.2 8.2l1.4 1.4M4.5 15.5l1.4-1.4m8.2-8.2l1.4-1.4"/>
+        </svg>
+        <span class="menu-text">Pengaturan</span>
+      </button>
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebarAvatar">R</div>
+        <div class="menu-text sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebarUserName">Rado</div>
+          <div class="sidebar-user-tag">Ruang milikmu</div>
+        </div>
+      </div>
+      <div class="menu-text sidebar-message">Sedikit demi sedikit, tetap berarti.</div>
+    </div>
+  </aside>
+
+  <!-- ========== MAIN ========== -->
+  <main class="main">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-breadcrumb">
+        <span>Ruang personal</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2l4 4-4 4"/></svg>
+        <span>Ringkasan</span>
+      </div>
+      <div class="header-actions">
+        <div class="storage-indicator" id="storageIndicator" title="Penyimpanan browser aktif">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M7 4v3l2 1"/></svg>
+          <span class="storage-text">Tersimpan</span>
+        </div>
+        <button class="icon-btn" id="btnTheme" aria-label="Ganti tema">
+          <svg class="icon-sun" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <circle cx="9" cy="9" r="3.5"/><path d="M9 1v2m0 12v2M1 9h2m12 0h2M3.5 3.5l1.4 1.4m8.2 8.2l1.4 1.4M3.5 14.5l1.4-1.4m8.2-8.2l1.4-1.4"/>
+          </svg>
+          <svg class="icon-moon" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M15 9.5A6 6 0 0 1 8.5 3a6 6 0 1 0 6.5 6.5z"/>
+          </svg>
+        </button>
+        <button class="icon-btn header-settings-btn" id="btnSettingsHeader" aria-label="Pengaturan" style="display:none">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="9" r="2.5"/><path d="M9 1.5v1.5m0 12v1.5M1.5 9h1.5m12 0h1.5M3.8 3.8l1 1m8.4 8.4l1 1M3.8 14.2l1-1m8.4-8.4l1-1"/>
+          </svg>
+        </button>
+        <div class="header-avatar" id="headerAvatar">R</div>
+      </div>
+    </header>
+
+    <!-- Pembuka -->
+    <section class="pembuka" id="ringkasan">
+      <div class="pembuka-left">
+        <div class="eyebrow">HARI BARU, RUANG BARU</div>
+        <h1 class="greeting" id="greeting">Selamat pagi, Rado.</h1>
+        <p class="greeting-desc">Kasih ruang untuk hal yang berarti. Mulai dari satu hal kecil.</p>
+      </div>
+      <div class="pembuka-right">
+        <div class="date" id="dateText">Senin, 1 Januari 2025</div>
+        <div class="clock-row">
+          <div class="clock" id="clockText">00:00:00</div>
+          <div class="timezone" id="timezoneText">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ringkasan Harian -->
+    <section class="daily-summary">
+      <div class="summary-item">
+        <div class="summary-value" id="summaryTasksDone">0</div>
+        <div class="summary-label">Tugas selesai</div>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-item">
+        <div class="summary-value" id="summaryFocusMinutes">0</div>
+        <div class="summary-label">Menit fokus</div>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-item">
+        <div class="summary-value" id="summarySessions">0/4</div>
+        <div class="summary-label">Sesi fokus</div>
+      </div>
+    </section>
+
+    <!-- Grid Utama -->
+    <div class="grid">
+      <!-- KARTU TUGAS -->
+      <section class="card card-tasks" id="tugas">
+        <div class="card-header">
+          <h2 class="card-title">Rencana hari ini <span class="card-count" id="taskCount">(0)</span></h2>
+        </div>
+        <div class="task-quick-input">
+          <input type="text" id="quickInput" placeholder="Apa yang ingin kamu selesaikan?" maxlength="160" autocomplete="off">
+          <button class="btn-ghost" id="btnAddDetail" aria-label="Tambah detail" title="Tambah detail">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M9 3v12M3 9h12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="task-controls">
+          <div class="task-filters">
+            <button class="filter-btn active" data-filter="all">Semua</button>
+            <button class="filter-btn" data-filter="active">Aktif</button>
+            <button class="filter-btn" data-filter="done">Selesai</button>
+          </div>
+          <div class="task-right-controls">
+            <div class="search-box">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><path d="M9.5 9.5l3 3"/></svg>
+              <input type="text" id="searchInput" placeholder="Cari..." autocomplete="off">
+            </div>
+            <select class="sort-select" id="sortSelect" aria-label="Urutan">
+              <option value="newest">Terbaru</option>
+              <option value="priority">Prioritas</option>
+              <option value="az">A–Z</option>
+            </select>
+          </div>
+        </div>
+        <div class="task-list" id="taskList"></div>
+        <div class="empty-state" id="emptyState">
+          <h3 class="empty-title">Hari ini masih terbuka.</h3>
+          <p class="empty-desc">Nggak harus banyak. Pilih satu hal kecil yang ingin kamu selesaikan hari ini.</p>
+          <div class="empty-suggestions">
+            <button class="btn-suggestion" data-suggestion="Baca 10 halaman">+ Baca 10 halaman</button>
+            <button class="btn-suggestion" data-suggestion="Satu hal penting">+ Satu hal penting</button>
+          </div>
+        </div>
+        <div class="task-progress" id="taskProgress" style="display:none">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <span class="progress-text" id="progressText">0 dari 0 tugas selesai</span>
+        </div>
+      </section>
+
+      <!-- KARTU TIMER -->
+      <section class="card card-timer" id="fokus">
+        <div class="card-header">
+          <h2 class="card-title" id="timerTitle">Waktunya fokus</h2>
+          <button class="btn-ghost" id="btnExpandFocus" aria-label="Mode fokus penuh" title="Mode fokus penuh">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6V3h3M15 6V3h-3M3 12v3h3M15 12v3h-3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="timer-tabs">
+          <button class="timer-tab active" data-mode="focus">Fokus</button>
+          <button class="timer-tab" data-mode="break">Istirahat</button>
+        </div>
+        <div class="timer-circle-wrapper">
+          <svg class="timer-circle" width="208" height="208" viewBox="0 0 208 208">
+            <circle cx="104" cy="104" r="98" fill="none" stroke="var(--timer-ring-bg)" stroke-width="3"/>
+            <circle class="timer-progress-ring" cx="104" cy="104" r="98" fill="none" stroke="var(--btn-primary)" stroke-width="3" stroke-linecap="round" transform="rotate(-90 104 104)"/>
+          </svg>
+          <div class="timer-display" id="timerDisplay">25:00</div>
+        </div>
+        <div class="timer-controls">
+          <button class="btn-primary" id="btnTimerStart">Mulai fokus</button>
+          <button class="btn-primary" id="btnTimerPause" style="display:none">Jeda</button>
+          <button class="btn-primary" id="btnTimerResume" style="display:none">Lanjutkan</button>
+          <button class="btn-ghost" id="btnTimerReset">Reset</button>
+        </div>
+        <div class="timer-task-select">
+          <label class="timer-task-label">Tugas</label>
+          <select id="timerTaskSelect" aria-label="Pilih tugas">
+            <option value="">Fokus tanpa tugas tertentu</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- KARTU PINTASAN -->
+      <section class="card card-shortcuts" id="pintasan">
+        <div class="card-header">
+          <h2 class="card-title">Pintasan favorit</h2>
+          <button class="btn-ghost" id="btnAddShortcut" aria-label="Tambah pintasan" title="Tambah pintasan">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M9 3v12M3 9h12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="shortcuts-grid" id="shortcutsGrid"></div>
+      </section>
+
+      <!-- KARTU AKTIVITAS -->
+      <section class="card card-activity" id="aktivitas">
+        <div class="card-header">
+          <h2 class="card-title">Ritme minggu ini</h2>
+        </div>
+        <div class="activity-stats">
+          <div class="activity-stat">
+            <div class="activity-stat-value" id="weekMinutes">0</div>
+            <div class="activity-stat-label">Total menit</div>
+          </div>
+          <div class="activity-stat">
+            <div class="activity-stat-value" id="weekSessions">0</div>
+            <div class="activity-stat-label">Sesi</div>
+          </div>
+        </div>
+        <div class="activity-chart" id="activityChart"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ========== DIALOG PENGATURAN ========== -->
+  <div class="dialog-overlay" id="settingsDialog">
+    <div class="dialog">
+      <div class="dialog-header">
+        <h2 class="dialog-title">Jadikan milikmu</h2>
+        <button class="dialog-close" id="btnCloseSettings" aria-label="Tutup">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l10 10M14 4L4 14"/></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="setting-group">
+          <label class="setting-label">Nama panggilan</label>
+          <input type="text" class="setting-input" id="settingName" maxlength="30" autocomplete="off">
+        </div>
+        <div class="setting-row">
+          <div class="setting-group">
+            <label class="setting-label">Durasi fokus (menit)</label>
+            <input type="number" class="setting-input" id="settingFocusMinutes" min="1" max="120">
+          </div>
+          <div class="setting-group">
+            <label class="setting-label">Durasi istirahat (menit)</label>
+            <input type="number" class="setting-input" id="settingBreakMinutes" min="1" max="60">
+          </div>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">Target sesi per hari</label>
+          <div class="setting-options">
+            <button class="option-btn" data-goal="2">2</button>
+            <button class="option-btn active" data-goal="4">4</button>
+            <button class="option-btn" data-goal="6">6</button>
+            <button class="option-btn" data-goal="8">8</button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">Tema</label>
+          <div class="setting-options">
+            <button class="option-btn" data-theme-opt="light">Terang</button>
+            <button class="option-btn active" data-theme-opt="dark">Gelap</button>
+            <button class="option-btn" data-theme-opt="system">Ikuti perangkat</button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">Suara selesai</label>
+          <div class="setting-toggle">
+            <button class="toggle-btn active" id="settingSound" aria-label="Suara selesai">Aktif</button>
+          </div>
+        </div>
+        <hr class="setting-divider">
+        <div class="setting-group">
+          <label class="setting-label">Cadangan ruangmu</label>
+          <div class="backup-buttons">
+            <button class="btn-secondary" id="btnExport">Ekspor</button>
+            <button class="btn-secondary" id="btnImport">Impor</button>
+            <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== DIALOG DETAIL TUGAS ========== -->
+  <div class="dialog-overlay" id="taskDetailDialog">
+    <div class="dialog dialog-sm">
+      <div class="dialog-header">
+        <h2 class="dialog-title" id="taskDetailTitle">Tambah tugas</h2>
+        <button class="dialog-close" id="btnCloseTaskDetail" aria-label="Tutup">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l10 10M14 4L4 14"/></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="setting-group">
+          <label class="setting-label">Judul</label>
+          <input type="text" class="setting-input" id="taskTitleInput" maxlength="160" autocomplete="off">
+        </div>
+        <div class="setting-row">
+          <div class="setting-group">
+            <label class="setting-label">Kategori</label>
+            <select class="setting-input" id="taskCategoryInput">
+              <option value="personal">Personal</option>
+              <option value="belajar">Belajar</option>
+              <option value="kerja">Kerja</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <label class="setting-label">Prioritas</label>
+            <select class="setting-input" id="taskPriorityInput">
+              <option value="high">Tinggi</option>
+              <option value="normal">Normal</option>
+              <option value="low">Rendah</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn-secondary" id="btnTaskCancel">Batal</button>
+        <button class="btn-primary" id="btnTaskSave">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== DIALOG PINTASAN ========== -->
+  <div class="dialog-overlay" id="shortcutDialog">
+    <div class="dialog dialog-sm">
+      <div class="dialog-header">
+        <h2 class="dialog-title" id="shortcutDialogTitle">Tambah pintasan</h2>
+        <button class="dialog-close" id="btnCloseShortcut" aria-label="Tutup">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l10 10M14 4L4 14"/></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="setting-group">
+          <label class="setting-label">Nama</label>
+          <input type="text" class="setting-input" id="shortcutNameInput" maxlength="40" autocomplete="off">
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">URL</label>
+          <input type="text" class="setting-input" id="shortcutUrlInput" placeholder="github.com" autocomplete="off">
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn-secondary" id="btnShortcutCancel">Batal</button>
+        <button class="btn-primary" id="btnShortcutSave">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODE FOKUS PENUH ========== -->
+  <div class="focus-overlay" id="focusOverlay">
+    <div class="focus-header">
+      <div class="focus-logo">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(11 11) rotate(12)">
+            <rect x="-5.5" y="-5.5" width="5" height="5" rx="1" fill="#3f5d4b"/>
+            <rect x="0.5" y="-5.5" width="5" height="5" rx="1" fill="#3f5d4b"/>
+            <rect x="-5.5" y="0.5" width="5" height="5" rx="1" fill="#3f5d4b"/>
+            <rect x="0.5" y="0.5" width="5" height="5" rx="1" fill="#ba785a"/>
+          </g>
+        </svg>
+        <span class="focus-logo-text">ruang<span class="logo-dot">.</span></span>
+      </div>
+      <button class="btn-ghost focus-exit" id="btnExitFocus" aria-label="Keluar dari mode fokus">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l10 10M14 4L4 14"/></svg>
+      </button>
+    </div>
+    <div class="focus-content">
+      <div class="focus-eyebrow">DUNIA BISA MENUNGGU SEBENTAR</div>
+      <h2 class="focus-title">Cukup satu hal, sekarang.</h2>
+      <div class="focus-task-name" id="focusTaskName">Fokus tanpa tugas tertentu</div>
+      <div class="focus-timer" id="focusTimerDisplay">25:00</div>
+      <div class="focus-controls">
+        <button class="btn-primary" id="btnFocusStart">Mulai fokus</button>
+        <button class="btn-primary" id="btnFocusPause" style="display:none">Jeda</button>
+        <button class="btn-primary" id="btnFocusResume" style="display:none">Lanjutkan</button>
+        <button class="btn-ghost" id="btnFocusReset">Reset</button>
+      </div>
+      <p class="focus-message">Tarik napas. Beri perhatian pada yang sedang kamu kerjakan.</p>
+    </div>
+  </div>
+
+  <!-- ========== TOAST CONTAINER ========== -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
