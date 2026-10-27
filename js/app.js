@@ -254,7 +254,6 @@ function updateGreeting() {
 
 function updateAvatar(name) {
   var initial = (name || 'R').charAt(0).toUpperCase();
-  document.getElementById('headerAvatar').textContent = initial;
   document.getElementById('sidebarAvatar').textContent = initial;
   document.getElementById('sidebarUserName').textContent = name || 'Rado';
 }
@@ -560,6 +559,9 @@ function updateTimerDisplay(remaining) {
   if (el) el.textContent = text;
   var focusEl = document.getElementById('focusTimerDisplay');
   if (focusEl) focusEl.textContent = text;
+  var runningButton = document.getElementById('btnRunningTimer');
+  runningButton.hidden = !state.timer.running && (state.timer.remaining >= state.timer.total || state.timer.remaining <= 0);
+  runningButton.textContent = (state.timer.running ? (state.timer.mode === 'focus' ? 'Fokus · ' : 'Istirahat · ') : 'Jeda · ') + text;
   // Update ring
   var ring = document.querySelector('.timer-progress-ring');
   if (ring) {
@@ -832,6 +834,7 @@ function renderTasks() {
   count.textContent = '(' + total + ')';
   menuCount.textContent = active;
 
+  document.getElementById('taskResultsEmpty').hidden = true;
   if (total === 0) {
     list.innerHTML = '';
     empty.style.display = 'block';
@@ -898,6 +901,7 @@ function renderTasks() {
       '</div>';
   }).join('');
   list.innerHTML = html;
+  document.getElementById('taskResultsEmpty').hidden = filtered.length > 0;
 
   // Progress
   var pct = total > 0 ? (done / total) * 100 : 0;
@@ -972,54 +976,61 @@ function renderStats() {
   document.getElementById('summarySessions').textContent = sessions + '/' + goal;
 }
 
+var historyLimit = 20;
 function renderActivity() {
   var weekly = Stats.weeklyData();
   var totalMinutes = Stats.weeklyTotalMinutes();
   var totalSessions = Stats.weeklyTotalSessions();
   document.getElementById('weekMinutes').textContent = totalMinutes;
   document.getElementById('weekSessions').textContent = totalSessions;
-  // Chart
   var maxMins = Math.max.apply(null, weekly.map(function(d) { return d.minutes; }));
   var dayLabels = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
-  var html = weekly.map(function(d) {
-    var date = new Date(d.date + 'T12:00:00');
-    var label = dayLabels[date.getDay()];
+  var chart = document.getElementById('activityChart');
+  chart.innerHTML = weekly.map(function(d) {
+    var label = dayLabels[new Date(d.date + 'T12:00:00').getDay()];
     var height = maxMins > 0 ? (d.minutes / maxMins) * 100 : 0;
     return '<div class="bar-day">' +
-      '<div class="bar-wrapper"><div class="bar' + (d.isToday ? ' active' : '') + '" style="height: ' + Math.max(2, height) + '%" title="' + d.minutes + ' menit"></div></div>' +
-      '<div class="bar-label">' + label + '</div>' +
-      '</div>';
+      '<div class="bar-wrapper"><div class="bar' + (d.isToday ? ' active' : '') + '" style="height:' + Math.max(2, height) + '%" title="' + d.minutes + ' menit">' +
+      (d.minutes > 0 ? '<span class="bar-value">' + d.minutes + '</span>' : '') + '</div></div>' +
+      '<div class="bar-label">' + label + '</div></div>';
   }).join('');
-  document.getElementById('activityChart').innerHTML = html;
+  chart.setAttribute('aria-label', 'Menit fokus 7 hari terakhir. ' + weekly.map(function(d) { return d.date + ': ' + d.minutes + ' menit'; }).join(', '));
+  document.getElementById('activityHint').textContent = totalSessions ? totalSessions + ' sesi selesai dalam 7 hari terakhir. Setiap sesi kecil ikut berarti.' : 'Belum ada sesi dalam 7 hari terakhir. Selesaikan satu sesi fokus untuk mulai melihat ritmemu.';
+  document.getElementById('historyCount').textContent = state.sessions.length + ' sesi';
+  var sessions = state.sessions.slice().sort(function(a, b) { return new Date(b.endedAt) - new Date(a.endedAt); });
+  var history = document.getElementById('sessionHistory');
+  if (!sessions.length) {
+    history.innerHTML = '<div class="history-empty">Riwayatmu masih kosong. Pilih tugas, jalankan timer, dan selesaikan satu sesi.<br><button class="text-button" data-open-view="fokus">Mulai sesi pertama ↗</button></div>';
+    return;
+  }
+  history.innerHTML = sessions.slice(0, historyLimit).map(function(session) {
+    var task = state.tasks.find(function(t) { return t.id === session.taskId; });
+    var name = task ? task.title : (session.taskId ? 'Tugas yang sudah dihapus' : 'Fokus tanpa tugas tertentu');
+    var date = new Date(session.endedAt).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return '<div class="session-row"><div class="session-mark" aria-hidden="true">' + iconTimer() + '</div><div class="session-copy"><div class="session-name">' + escapeHtml(name) + '</div><div class="session-date">' + escapeHtml(date) + '</div></div><span class="session-duration">' + Math.round(session.seconds / 60) + ' mnt</span></div>';
+  }).join('') + (sessions.length > historyLimit ? '<button class="text-button" id="btnMoreHistory">Tampilkan 20 sesi berikutnya</button>' : '');
 }
 
 function renderLinks() {
   var grid = document.getElementById('shortcutsGrid');
   if (state.links.length === 0) {
-    grid.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-secondary);font-size:0.85rem;">Belum ada pintasan.</div>';
+    grid.innerHTML = '<p class="card-description">Belum ada pintasan. Tekan tombol tambah untuk menyimpan situs pertamamu.</p>';
     return;
   }
-  var html = state.links.map(function(l) {
+  grid.innerHTML = state.links.map(function(l) {
     var colors = Links.getIconColors(l.name);
     var icon;
     if (l.name.toLowerCase() === 'youtube') {
-      icon = '<div class="shortcut-icon" style="background:' + colors.bg + ';color:' + colors.text + '">' +
-        '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="4" width="18" height="12" rx="3" fill="' + colors.text + '"/><path d="M8 7.5l5 2.5-5 2.5v-5z" fill="#fffefa"/></svg>' +
-        '</div>';
+      icon = '<div class="shortcut-icon" style="background:' + colors.bg + ';color:' + colors.text + '"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="4" width="18" height="12" rx="3" fill="' + colors.text + '"/><path d="M8 7.5l5 2.5-5 2.5v-5z" fill="#fffefa"/></svg></div>';
     } else {
-      var monogram = colors.monogram || l.name.charAt(0).toUpperCase();
-      icon = '<div class="shortcut-icon" style="background:' + colors.bg + ';color:' + colors.text + ';border-color:#e8e9e1;">' + escapeHtml(monogram) + '</div>';
+      icon = '<div class="shortcut-icon" style="background:' + colors.bg + ';color:' + colors.text + ';border-color:#e8e9e1;">' + escapeHtml(colors.monogram || l.name.charAt(0).toUpperCase()) + '</div>';
     }
-    return '<div class="shortcut-card" data-url="' + escapeHtml(l.url) + '" data-id="' + escapeHtml(l.id) + '">' +
-      icon +
-      '<div class="shortcut-name">' + escapeHtml(l.name) + '</div>' +
-      '<div class="shortcut-actions">' +
-      '<button class="shortcut-action-btn" data-link-action="edit" data-id="' + escapeHtml(l.id) + '" aria-label="Edit">' + iconEdit() + '</button>' +
-      '<button class="shortcut-action-btn" data-link-action="delete" data-id="' + escapeHtml(l.id) + '" aria-label="Hapus">' + iconDelete() + '</button>' +
-      '</div>' +
-      '</div>';
+    return '<div class="shortcut-card" data-id="' + escapeHtml(l.id) + '">' +
+      '<a class="shortcut-main" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener noreferrer" aria-label="' + escapeHtml('Buka ' + l.name + ' di tab baru') + '">' + icon +
+      '<span class="shortcut-name">' + escapeHtml(l.name) + '</span><span class="shortcut-domain">' + escapeHtml(new URL(l.url).hostname) + ' ↗</span></a>' +
+      '<div class="shortcut-actions"><button class="shortcut-action-btn" data-link-action="edit" data-id="' + escapeHtml(l.id) + '" aria-label="' + escapeHtml('Edit ' + l.name) + '" title="Edit pintasan">' + iconEdit() + '</button>' +
+      '<button class="shortcut-action-btn" data-link-action="delete" data-id="' + escapeHtml(l.id) + '" aria-label="' + escapeHtml('Hapus ' + l.name) + '" title="Hapus pintasan">' + iconDelete() + '</button></div></div>';
   }).join('');
-  grid.innerHTML = html;
 }
 
 // ==================== SVG ICONS ====================
@@ -1030,7 +1041,7 @@ function iconEdit() {
   return '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l3 3-7 7H2v-3l7-7z"/></svg>';
 }
 function iconDelete() {
-  return '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h8M5 4V3h4v1m-4 1v6m2-6v6m-3 0h6"/></svg>';
+  return '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4h9M5 4V2.5h4V4M4 4l.5 8h5L10 4M6 6v4M8 6v4"/></svg>';
 }
 
 function escapeHtml(str) {
@@ -1215,6 +1226,47 @@ function saveShortcut() {
   closeShortcutDialog();
 }
 
+// ==================== NAVIGATION ====================
+var Navigation = {
+  current: 'ringkasan',
+  show: function(view, updateUrl) {
+    if (view === 'fokus') { FocusMode.open(); return; }
+    var pages = {
+      ringkasan: { label: 'Ringkasan', cards: ['tugas', 'fokus', 'aktivitas', 'pintasan'] },
+      tugas: { label: 'Daftar tugas', title: 'Dari rencana jadi selesai.', eyebrow: 'SATU PER SATU, TETAP MAJU', description: 'Atur tugas, tentukan prioritas, lalu tekan ikon fokus di tugas yang ingin kamu kerjakan.', cards: ['tugas'] },
+      aktivitas: { label: 'Aktivitas', title: 'Waktumu punya cerita.', eyebrow: 'LIHAT USAHA YANG SUDAH ADA', description: 'Lihat menit fokus selama 7 hari terakhir dan telusuri sesi yang sudah kamu selesaikan.', cards: ['aktivitas', 'riwayat'] },
+      pintasan: { label: 'Pintasan', title: 'Situs penting, satu klik.', eyebrow: 'JALAN PENDEK KE YANG KAMU PERLU', description: 'Buka situs di tab baru. Tambahkan tautanmu sendiri, atau rapikan daftar lewat tombol edit dan hapus.', cards: ['pintasan'] }
+    };
+    if (!pages[view]) view = 'ringkasan';
+    var page = pages[view];
+    Navigation.current = view;
+    document.querySelector('.main').dataset.view = view;
+    document.getElementById('ringkasan').hidden = view !== 'ringkasan';
+    document.querySelector('.daily-summary').hidden = view !== 'ringkasan';
+    document.getElementById('viewIntro').hidden = view === 'ringkasan';
+    document.getElementById('viewTitle').textContent = page.title || '';
+    document.getElementById('viewEyebrow').textContent = page.eyebrow || '';
+    document.getElementById('viewDescription').textContent = page.description || '';
+    ['tugas', 'fokus', 'aktivitas', 'pintasan', 'riwayat'].forEach(function(id) {
+      document.getElementById(id).hidden = page.cards.indexOf(id) < 0;
+    });
+    document.querySelectorAll('.dashboard-column').forEach(function(column) {
+      column.hidden = Array.from(column.children).every(function(card) { return card.hidden; });
+    });
+    document.querySelectorAll('[data-section]').forEach(function(item) {
+      var active = item.dataset.section === view;
+      item.classList.toggle('active', active);
+      if (active) item.setAttribute('aria-current', 'page');
+      else item.removeAttribute('aria-current');
+    });
+    document.querySelector('.header-breadcrumb span:last-of-type').textContent = page.label;
+    if (view === 'aktivitas') renderActivity();
+    if (updateUrl && location.hash !== '#' + view) history.pushState(null, '', '#' + view);
+    document.querySelector('.main').scrollIntoView({ behavior: 'auto', block: 'start' });
+    if (updateUrl && view !== 'ringkasan') document.getElementById('viewTitle').focus({ preventScroll: true });
+  }
+};
+
 // ==================== EVENT LISTENERS ====================
 var currentFilter = 'all';
 
@@ -1248,6 +1300,13 @@ function setupEventListeners() {
 
   // Search
   document.getElementById('searchInput').addEventListener('input', renderTasks);
+  document.getElementById('btnClearTaskSearch').addEventListener('click', function() {
+    currentFilter = 'all';
+    document.getElementById('searchInput').value = '';
+    document.querySelectorAll('.filter-btn').forEach(function(btn) { btn.classList.toggle('active', btn.dataset.filter === 'all'); });
+    renderTasks();
+    document.getElementById('searchInput').focus();
+  });
 
   // Sort
   document.getElementById('sortSelect').addEventListener('change', renderTasks);
@@ -1259,7 +1318,7 @@ function setupEventListeners() {
     var action = target.dataset.action;
     var id = target.dataset.id;
     if (action === 'toggle') { Tasks.toggle(id); }
-    else if (action === 'focus') { Timer.setTask(id); }
+    else if (action === 'focus') { if (Timer.setTask(id)) FocusMode.open(); }
     else if (action === 'edit') { openTaskDetail(id); }
     else if (action === 'delete') { Tasks.remove(id); }
   });
@@ -1280,7 +1339,7 @@ function setupEventListeners() {
   });
 
   // Empty state suggestions
-  document.querySelectorAll('.btn-suggestion').forEach(function(btn) {
+  document.querySelectorAll('.btn-suggestion[data-suggestion]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       Tasks.add(btn.dataset.suggestion);
     });
@@ -1308,6 +1367,7 @@ function setupEventListeners() {
 
   // Focus overlay
   document.getElementById('btnExpandFocus').addEventListener('click', function() { FocusMode.open(); });
+  document.getElementById('btnRunningTimer').addEventListener('click', function() { FocusMode.open(); });
   document.getElementById('btnExitFocus').addEventListener('click', function() { FocusMode.close(); });
   document.getElementById('btnFocusStart').addEventListener('click', function() { Timer.start(); });
   document.getElementById('btnFocusPause').addEventListener('click', function() { Timer.pause(); });
@@ -1324,11 +1384,6 @@ function setupEventListeners() {
       if (actionBtn.dataset.linkAction === 'edit') openShortcutDialog(actionBtn.dataset.id);
       else if (actionBtn.dataset.linkAction === 'delete') Links.remove(actionBtn.dataset.id);
       return;
-    }
-    var card = e.target.closest('.shortcut-card');
-    if (card) {
-      var url = card.dataset.url;
-      if (url) window.open(url, '_blank', 'noopener,noreferrer');
     }
   });
 
@@ -1393,6 +1448,7 @@ function setupEventListeners() {
     // Ctrl+K / Cmd+K
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
       e.preventDefault();
+      if (document.getElementById('tugas').hidden) Navigation.show('tugas', true);
       document.getElementById('searchInput').focus();
       document.getElementById('searchInput').select();
     }
@@ -1424,29 +1480,20 @@ function setupEventListeners() {
     }
   });
 
-  // Sidebar navigation
-  document.querySelectorAll('.menu-item[data-section]').forEach(function(item) {
+  // Desktop and mobile navigation share the same views.
+  document.querySelectorAll('[data-section]').forEach(function(item) {
     item.addEventListener('click', function(e) {
       e.preventDefault();
-      var section = item.dataset.section;
-      document.querySelectorAll('.menu-item[data-section]').forEach(function(m) {
-        m.classList.remove('active');
-        m.removeAttribute('aria-current');
-      });
-      item.classList.add('active');
-      item.setAttribute('aria-current', 'page');
-      document.querySelector('.header-breadcrumb span:last-of-type').textContent = item.querySelector('.menu-text').textContent.trim();
-      if (section === 'fokus') {
-        FocusMode.open();
-        return;
-      }
-      var target = document.getElementById(section);
-      if (target) target.scrollIntoView({
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-        block: 'start'
-      });
+      Navigation.show(item.dataset.section, true);
     });
   });
+  document.addEventListener('click', function(e) {
+    var link = e.target.closest('[data-open-view]');
+    if (link) { e.preventDefault(); Navigation.show(link.dataset.openView, true); }
+    if (e.target.closest('#btnMoreHistory')) { historyLimit += 20; renderActivity(); }
+  });
+  window.addEventListener('popstate', function() { Navigation.show(location.hash.slice(1), false); });
+  window.addEventListener('hashchange', function() { Navigation.show(location.hash.slice(1), false); });
 
   // Cross-tab sync
   window.addEventListener('storage', function(e) {
@@ -1545,6 +1592,7 @@ function init() {
   var tzEl = document.getElementById('timezoneText');
   if (tzEl) tzEl.textContent = getTimezoneLabel();
   renderAll();
+  Navigation.show(location.hash.slice(1) || 'ringkasan', false);
 
   // Check if timer was running and may have completed during refresh
   if (state.timer.running && state.timer.endAt) {

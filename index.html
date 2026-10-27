@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261028">
+  <link rel="stylesheet" href="css/style.css?v=20261028-final">
 </head>
 <body>
   <!-- ========== SIDEBAR ========== -->
@@ -29,7 +29,7 @@
 
     <!-- Menu -->
     <nav class="sidebar-menu">
-      <a href="#ringkasan" class="menu-item active" data-section="ringkasan">
+      <a href="#ringkasan" class="menu-item active" data-section="ringkasan" aria-current="page">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/>
           <rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/>
@@ -40,7 +40,7 @@
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M5 3h10v14l-5-3-5 3V3z"/><path d="M8 8l2 2 4-4"/>
         </svg>
-        <span class="menu-text">Tugas hari ini</span>
+        <span class="menu-text">Daftar tugas</span>
         <span class="menu-badge" id="menuTaskCount">0</span>
       </a>
       <a href="#fokus" class="menu-item" data-section="fokus">
@@ -83,15 +83,17 @@
   </aside>
 
   <!-- ========== MAIN ========== -->
-  <main class="main">
+  <main class="main" data-view="ringkasan">
     <!-- Header -->
     <header class="header">
+      <a class="mobile-brand logo-text" href="#ringkasan" data-open-view="ringkasan" aria-label="Ruang, kembali ke ringkasan">ruang<span class="logo-dot">.</span></a>
       <div class="header-breadcrumb">
         <span>Ruang personal</span>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2l4 4-4 4"/></svg>
         <span>Ringkasan</span>
       </div>
       <div class="header-actions">
+        <button class="running-timer-button" id="btnRunningTimer" title="Buka sesi yang sedang berlangsung" hidden></button>
         <div class="storage-indicator" id="storageIndicator" title="Penyimpanan browser aktif">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M7 4v3l2 1"/></svg>
           <span class="storage-text">Tersimpan</span>
@@ -109,9 +111,22 @@
             <circle cx="9" cy="9" r="2.5"/><path d="M9 1.5v1.5m0 12v1.5M1.5 9h1.5m12 0h1.5M3.8 3.8l1 1m8.4 8.4l1 1M3.8 14.2l1-1m8.4-8.4l1-1"/>
           </svg>
         </button>
-        <div class="header-avatar" id="headerAvatar">R</div>
+
       </div>
     </header>
+
+    <nav class="mobile-nav" aria-label="Halaman ruang">
+      <a href="#ringkasan" data-section="ringkasan" aria-current="page">Ringkasan</a>
+      <a href="#tugas" data-section="tugas">Tugas</a>
+      <a href="#fokus" data-section="fokus">Fokus</a>
+      <a href="#aktivitas" data-section="aktivitas">Aktivitas</a>
+      <a href="#pintasan" data-section="pintasan">Pintasan</a>
+    </nav>
+    <section class="view-intro" id="viewIntro" hidden>
+      <div class="eyebrow" id="viewEyebrow"></div>
+      <h1 id="viewTitle" tabindex="-1"></h1>
+      <p id="viewDescription"></p>
+    </section>
 
     <!-- Pembuka -->
     <section class="pembuka" id="ringkasan">
@@ -149,10 +164,10 @@
 
     <!-- Grid Utama -->
     <div class="grid">
-      <!-- KARTU TUGAS -->
+      <div class="dashboard-column" id="primaryColumn">
       <section class="card card-tasks" id="tugas">
         <div class="card-header">
-          <h2 class="card-title">Rencana hari ini <span class="card-count" id="taskCount">(0)</span></h2>
+          <h2 class="card-title">Rencana kamu <span class="card-count" id="taskCount">(0)</span></h2>
         </div>
         <div class="task-quick-input">
           <input type="text" id="quickInput" aria-label="Judul tugas baru" placeholder="Apa yang ingin kamu selesaikan?" maxlength="160" autocomplete="off">
@@ -181,6 +196,11 @@
           </div>
         </div>
         <div class="task-list" id="taskList"></div>
+        <div class="empty-state" id="taskResultsEmpty" hidden>
+          <p class="empty-title">Belum ketemu.</p>
+          <p class="empty-desc">Coba kata lain atau tampilkan semua tugasmu.</p>
+          <button class="btn-suggestion" id="btnClearTaskSearch">Tampilkan semua tugas</button>
+        </div>
         <div class="empty-state" id="emptyState">
           <h3 class="empty-title">Hari ini masih terbuka.</h3>
           <p class="empty-desc">Nggak harus banyak. Pilih satu hal kecil yang ingin kamu selesaikan hari ini.</p>
@@ -194,8 +214,26 @@
           <span class="progress-text" id="progressText">0 dari 0 tugas selesai</span>
         </div>
       </section>
-
-      <!-- KARTU TIMER -->
+      <section class="card card-activity" id="aktivitas">
+        <div class="card-header">
+          <h2 class="card-title">Ritme 7 hari terakhir</h2>
+        </div>
+        <div class="activity-stats">
+          <div class="activity-stat">
+            <div class="activity-stat-value" id="weekMinutes">0</div>
+            <div class="activity-stat-label">Total menit</div>
+          </div>
+          <div class="activity-stat">
+            <div class="activity-stat-value" id="weekSessions">0</div>
+            <div class="activity-stat-label">Sesi</div>
+          </div>
+        </div>
+        <div class="activity-chart" id="activityChart" role="img" aria-label="Menit fokus selama tujuh hari terakhir"></div>
+        <p class="activity-hint" id="activityHint"></p>
+        <button class="text-button overview-only" data-open-view="aktivitas">Lihat riwayat sesi <span aria-hidden="true">↗</span></button>
+      </section>
+      </div>
+      <div class="dashboard-column" id="secondaryColumn">
       <section class="card card-timer" id="fokus">
         <div class="card-header">
           <h2 class="card-title" id="timerTitle">Waktunya fokus</h2>
@@ -229,8 +267,6 @@
           </select>
         </div>
       </section>
-
-      <!-- KARTU PINTASAN -->
       <section class="card card-shortcuts" id="pintasan">
         <div class="card-header">
           <h2 class="card-title">Pintasan favorit</h2>
@@ -240,26 +276,15 @@
             </svg>
           </button>
         </div>
+        <p class="card-description">Buka situs yang sering kamu pakai tanpa mencari lagi.</p>
         <div class="shortcuts-grid" id="shortcutsGrid"></div>
       </section>
-
-      <!-- KARTU AKTIVITAS -->
-      <section class="card card-activity" id="aktivitas">
-        <div class="card-header">
-          <h2 class="card-title">Ritme minggu ini</h2>
-        </div>
-        <div class="activity-stats">
-          <div class="activity-stat">
-            <div class="activity-stat-value" id="weekMinutes">0</div>
-            <div class="activity-stat-label">Total menit</div>
-          </div>
-          <div class="activity-stat">
-            <div class="activity-stat-value" id="weekSessions">0</div>
-            <div class="activity-stat-label">Sesi</div>
-          </div>
-        </div>
-        <div class="activity-chart" id="activityChart"></div>
+      <section class="card card-history" id="riwayat" hidden>
+        <div class="card-header"><h2 class="card-title">Riwayat sesi fokus</h2><span class="card-count" id="historyCount"></span></div>
+        <p class="card-description">Sesi yang benar-benar kamu selesaikan. Istirahat tidak masuk hitungan.</p>
+        <div class="session-history" id="sessionHistory"></div>
       </section>
+      </div>
     </div>
   </main>
 
@@ -394,7 +419,7 @@
   </div>
 
   <!-- ========== MODE FOKUS PENUH ========== -->
-  <div class="focus-overlay" id="focusOverlay">
+  <div class="focus-overlay" id="focusOverlay" role="dialog" aria-modal="true" aria-label="Ruang fokus">
     <div class="focus-header">
       <div class="focus-logo">
         <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -429,6 +454,6 @@
   <!-- ========== TOAST CONTAINER ========== -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="js/app.js?v=20261028"></script>
+  <script src="js/app.js?v=20261028-final"></script>
 </body>
 </html>
