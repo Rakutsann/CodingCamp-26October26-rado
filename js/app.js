@@ -371,10 +371,11 @@ var Tasks = {
 // ==================== TIMER ====================
 var Timer = {
   start: function() {
-    ensureAudioContext();
     var t = state.timer;
+    if (t.running) return;
+    ensureAudioContext();
     // If completed (remaining <= 0), start fresh session with new ID
-    if (t.remaining <= 0) {
+    if (t.remaining <= 0 || state.sessions.some(function(s) { return s.id === t.id; })) {
       t.id = generateId();
       t.total = t.mode === 'focus' ? state.settings.focusMinutes * 60 : state.settings.breakMinutes * 60;
       t.remaining = t.total;
@@ -388,7 +389,8 @@ var Timer = {
   pause: function() {
     var t = state.timer;
     if (!t.running) return;
-    t.remaining = Math.max(0, Math.round((t.endAt - Date.now()) / 1000));
+    if (t.endAt <= Date.now()) { Timer.complete(); return; }
+    t.remaining = Math.max(0, (t.endAt - Date.now()) / 1000);
     t.running = false;
     t.endAt = null;
     Store.save();
@@ -396,13 +398,7 @@ var Timer = {
     stopTimerTick();
   },
   resume: function() {
-    ensureAudioContext();
-    var t = state.timer;
-    t.running = true;
-    t.endAt = Date.now() + t.remaining * 1000;
-    Store.save();
-    renderTimer();
-    startTimerTick();
+    Timer.start();
   },
   reset: function() {
     var t = state.timer;
@@ -418,7 +414,7 @@ var Timer = {
   getRemaining: function() {
     var t = state.timer;
     if (t.running && t.endAt) {
-      return Math.max(0, Math.round((t.endAt - Date.now()) / 1000));
+      return Math.max(0, (t.endAt - Date.now()) / 1000);
     }
     return t.remaining;
   },
@@ -428,6 +424,7 @@ var Timer = {
     return t.total > 0 ? (t.total - remaining) / t.total : 0;
   },
   tick: function() {
+    if (!state.timer.running) return;
     var remaining = Timer.getRemaining();
     updateTimerDisplay(remaining);
     if (remaining <= 0) {
@@ -436,6 +433,7 @@ var Timer = {
   },
   complete: function() {
     var t = state.timer;
+    if (!t.running) return;
     var scheduledEnd = t.endAt || Date.now(); // save before nulling
     stopTimerTick();
     t.running = false;
@@ -455,6 +453,7 @@ var Timer = {
       }
     }
     Store.save();
+    renderTasks();
     renderTimer();
     renderStats();
     renderActivity();
@@ -472,6 +471,7 @@ var Timer = {
   },
   setMode: function(mode) {
     var t = state.timer;
+    if (mode === t.mode) return true;
     if (t.running) {
       showToast('Jeda timer terlebih dahulu sebelum mengganti mode.');
       return false;
@@ -520,6 +520,7 @@ function stopTimerTick() {
 }
 
 function updateTimerDisplay(remaining) {
+  remaining = Math.max(0, Math.ceil(remaining));
   var m = Math.floor(remaining / 60);
   var s = remaining % 60;
   var text = pad(m) + ':' + pad(s);
@@ -886,6 +887,8 @@ function renderTimer() {
   var title = document.getElementById('timerTitle');
   if (t.mode === 'focus') title.textContent = 'Waktunya fokus';
   else title.textContent = 'Waktunya istirahat';
+  document.getElementById('btnTimerStart').textContent = t.mode === 'focus' ? 'Mulai fokus' : 'Mulai istirahat';
+  document.getElementById('btnFocusStart').textContent = t.mode === 'focus' ? 'Mulai fokus' : 'Mulai istirahat';
   // Tabs
   document.querySelectorAll('.timer-tab').forEach(function(tab) {
     tab.classList.toggle('active', tab.dataset.mode === t.mode);
@@ -1509,7 +1512,7 @@ function init() {
 
   // Check if timer was running and may have completed during refresh
   if (state.timer.running && state.timer.endAt) {
-    var remaining = Math.round((state.timer.endAt - Date.now()) / 1000);
+    var remaining = (state.timer.endAt - Date.now()) / 1000;
     if (remaining <= 0) {
       // Session completed while page was away
       Timer.complete();
