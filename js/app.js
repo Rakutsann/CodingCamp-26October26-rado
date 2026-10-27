@@ -11,6 +11,7 @@ var timerInterval = null;
 var clockInterval = null;
 var dateCheckInterval = null;
 var audioCtx = null;
+var focusReturnTarget = null;
 var lastDateStr = '';
 var storageReadBlocked = false;
 
@@ -1041,11 +1042,16 @@ function escapeHtml(str) {
 // ==================== FOCUS MODE ====================
 var FocusMode = {
   open: function() {
+    if (document.getElementById('focusOverlay').classList.contains('open')) return;
+    focusReturnTarget = document.activeElement;
     document.getElementById('focusOverlay').classList.add('open');
     renderTimer();
+    document.getElementById('btnExitFocus').focus();
   },
   close: function() {
     document.getElementById('focusOverlay').classList.remove('open');
+    if (focusReturnTarget && focusReturnTarget.isConnected) focusReturnTarget.focus();
+    focusReturnTarget = null;
   }
 };
 
@@ -1423,8 +1429,17 @@ function setupEventListeners() {
     item.addEventListener('click', function(e) {
       e.preventDefault();
       var section = item.dataset.section;
-      document.querySelectorAll('.menu-item').forEach(function(m) { m.classList.remove('active'); });
+      document.querySelectorAll('.menu-item[data-section]').forEach(function(m) {
+        m.classList.remove('active');
+        m.removeAttribute('aria-current');
+      });
       item.classList.add('active');
+      item.setAttribute('aria-current', 'page');
+      document.querySelector('.header-breadcrumb span:last-of-type').textContent = item.querySelector('.menu-text').textContent.trim();
+      if (section === 'fokus') {
+        FocusMode.open();
+        return;
+      }
       var target = document.getElementById(section);
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });

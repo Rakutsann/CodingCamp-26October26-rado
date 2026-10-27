@@ -155,7 +155,7 @@
           <h2 class="card-title">Rencana hari ini <span class="card-count" id="taskCount">(0)</span></h2>
         </div>
         <div class="task-quick-input">
-          <input type="text" id="quickInput" placeholder="Apa yang ingin kamu selesaikan?" maxlength="160" autocomplete="off">
+          <input type="text" id="quickInput" aria-label="Judul tugas baru" placeholder="Apa yang ingin kamu selesaikan?" maxlength="160" autocomplete="off">
           <button class="btn-ghost" id="btnAddDetail" aria-label="Tambah detail" title="Tambah detail">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
               <path d="M9 3v12M3 9h12"/>
@@ -171,7 +171,7 @@
           <div class="task-right-controls">
             <div class="search-box">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><path d="M9.5 9.5l3 3"/></svg>
-              <input type="text" id="searchInput" placeholder="Cari..." autocomplete="off">
+              <input type="text" id="searchInput" aria-label="Cari judul atau kategori tugas" placeholder="Cari..." autocomplete="off">
             </div>
             <select class="sort-select" id="sortSelect" aria-label="Urutan">
               <option value="newest">Terbaru</option>
@@ -223,7 +223,7 @@
           <button class="btn-ghost" id="btnTimerReset">Reset</button>
         </div>
         <div class="timer-task-select">
-          <label class="timer-task-label">Tugas</label>
+          <label class="timer-task-label" for="timerTaskSelect">Tugas</label>
           <select id="timerTaskSelect" aria-label="Pilih tugas">
             <option value="">Fokus tanpa tugas tertentu</option>
           </select>
@@ -274,16 +274,16 @@
       </div>
       <div class="dialog-body">
         <div class="setting-group">
-          <label class="setting-label">Nama panggilan</label>
-          <input type="text" class="setting-input" id="settingName" maxlength="30" autocomplete="off">
+          <label class="setting-label" for="settingName">Nama panggilan</label>
+          <input type="text" class="setting-input" id="settingName" maxlength="32" autocomplete="off">
         </div>
         <div class="setting-row">
           <div class="setting-group">
-            <label class="setting-label">Durasi fokus (menit)</label>
+            <label class="setting-label" for="settingFocusMinutes">Durasi fokus (menit)</label>
             <input type="number" class="setting-input" id="settingFocusMinutes" min="1" max="120">
           </div>
           <div class="setting-group">
-            <label class="setting-label">Durasi istirahat (menit)</label>
+            <label class="setting-label" for="settingBreakMinutes">Durasi istirahat (menit)</label>
             <input type="number" class="setting-input" id="settingBreakMinutes" min="1" max="60">
           </div>
         </div>
@@ -305,7 +305,7 @@
           </div>
         </div>
         <div class="setting-group">
-          <label class="setting-label">Suara selesai</label>
+          <label class="setting-label" for="settingSound">Suara selesai</label>
           <div class="setting-toggle">
             <button class="toggle-btn active" id="settingSound" aria-label="Suara selesai">Aktif</button>
           </div>
@@ -338,12 +338,12 @@
       </div>
       <div class="dialog-body">
         <div class="setting-group">
-          <label class="setting-label">Judul</label>
+          <label class="setting-label" for="taskTitleInput">Judul</label>
           <input type="text" class="setting-input" id="taskTitleInput" maxlength="160" autocomplete="off">
         </div>
         <div class="setting-row">
           <div class="setting-group">
-            <label class="setting-label">Kategori</label>
+            <label class="setting-label" for="taskCategoryInput">Kategori</label>
             <select class="setting-input" id="taskCategoryInput">
               <option value="personal">Personal</option>
               <option value="belajar">Belajar</option>
@@ -351,7 +351,7 @@
             </select>
           </div>
           <div class="setting-group">
-            <label class="setting-label">Prioritas</label>
+            <label class="setting-label" for="taskPriorityInput">Prioritas</label>
             <select class="setting-input" id="taskPriorityInput">
               <option value="high">Tinggi</option>
               <option value="normal">Normal</option>
@@ -378,11 +378,11 @@
       </div>
       <div class="dialog-body">
         <div class="setting-group">
-          <label class="setting-label">Nama</label>
+          <label class="setting-label" for="shortcutNameInput">Nama</label>
           <input type="text" class="setting-input" id="shortcutNameInput" maxlength="40" autocomplete="off">
         </div>
         <div class="setting-group">
-          <label class="setting-label">URL</label>
+          <label class="setting-label" for="shortcutUrlInput">URL</label>
           <input type="text" class="setting-input" id="shortcutUrlInput" placeholder="github.com" autocomplete="off">
         </div>
       </div>
