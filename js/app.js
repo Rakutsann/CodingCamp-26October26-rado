@@ -12,6 +12,7 @@ var clockInterval = null;
 var dateCheckInterval = null;
 var audioCtx = null;
 var undoDelete = null; // { task, timeoutId }
+var lastDateStr = '';
 
 // ==================== DEFAULT STATE ====================
 function defaultState() {
@@ -145,11 +146,17 @@ function validateAndFill(data) {
     sessions: Array.isArray(data.sessions) ? data.sessions.filter(isValidSession).map(normalizeSession) : [],
     timer: data.timer && typeof data.timer === 'object' ? normalizeTimer(data.timer) : def.timer
   };
-  // Ensure timer total matches settings
-  result.timer.total = result.timer.mode === 'focus' ? result.settings.focusMinutes * 60 : result.settings.breakMinutes * 60;
-  if (!result.timer.running) {
-    result.timer.remaining = result.timer.total;
-    result.timer.endAt = null;
+  // Timer: preserve running/paused, only sync idle to settings
+  var t = result.timer;
+  if (t.running && t.endAt) {
+    // Running: keep as-is
+  } else if (!t.running && t.remaining > 0 && t.remaining < t.total) {
+    // Paused (started, not finished): keep remaining and total
+  } else {
+    // Idle or completed: sync to current settings
+    t.total = t.mode === 'focus' ? result.settings.focusMinutes * 60 : result.settings.breakMinutes * 60;
+    t.remaining = t.total;
+    t.endAt = null;
   }
   return result;
 }
@@ -193,8 +200,8 @@ function normalizeTimer(t) {
 // ==================== HELPERS ====================
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function pad(n) { return n < 10 ? '0' + n : '' + n; }
-function todayStr() { return new Date().toISOString().slice(0, 10); }
-function dateToStr(d) { return d.toISOString().slice(0, 10); }
+function todayStr() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+function dateToStr(d) { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
 
 // ==================== GREETING & TIME ====================
 function getGreetingPrefix(h) {
@@ -294,10 +301,12 @@ var Tasks = {
   },
   edit: function(id, updates) {
     var t = state.tasks.find(function(x) { return x.id === id; });
-    if (!t) return;
-    // Check duplicate when reactivating
-    if (updates.done === false && t.done) {
-      var normTitle = t.title.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!t) return false;
+    // Check duplicate on title change or reactivation
+    var newTitle = updates.title !== undefined ? updates.title : t.title;
+    var newDone = updates.done !== undefined ? updates.done : t.done;
+    if (!newDone) {
+      var normTitle = newTitle.toLowerCase().replace(/\s+/g, ' ').trim();
       var existing = state.tasks.find(function(x) {
         return x.id !== id && !x.done && x.title.toLowerCase().replace(/\s+/g, ' ').trim() === normTitle;
       });
@@ -374,6 +383,12 @@ var Timer = {
   start: function() {
     ensureAudioContext();
     var t = state.timer;
+    // If completed (remaining <= 0), start fresh session with new ID
+    if (t.remaining <= 0) {
+      t.id = generateId();
+      t.total = t.mode === 'focus' ? state.settings.focusMinutes * 60 : state.settings.breakMinutes * 60;
+      t.remaining = t.total;
+    }
     t.running = true;
     t.endAt = Date.now() + t.remaining * 1000;
     Store.save();
@@ -496,7 +511,8 @@ var Timer = {
   },
   updateDurations: function() {
     var t = state.timer;
-    if (!t.running) {
+    // Only update idle timers (never started, remaining === total)
+    if (!t.running && t.remaining > 0 && t.remaining === t.total) {
       t.total = t.mode === 'focus' ? state.settings.focusMinutes * 60 : state.settings.breakMinutes * 60;
       t.remaining = t.total;
       t.endAt = null;
@@ -731,10 +747,8 @@ var Backup = {
     reader.onload = function(e) {
       try {
         var data = JSON.parse(e.target.result);
-        if (!data || typeof data !== 'object') throw new Error('Invalid format');
-        // Validate
+        if (!validateBackup(data)) throw new Error('Invalid data');
         var validated = validateAndFill(data);
-        if (!validated) throw new Error('Invalid data');
         // Show confirmation
         var msg = 'Impor ' + validated.tasks.length + ' tugas, ' + validated.links.length + ' pintasan, ' + validated.sessions.length + ' sesi?';
         showToast(msg, 'Konfirmasi', function() {
@@ -763,12 +777,12 @@ function renderAll() {
   updateGreeting();
   updateDate();
   updateClock();
+  Timer.updateDurations();
   renderTasks();
   renderTimer();
   renderStats();
   renderActivity();
   renderLinks();
-  Timer.updateDurations();
 }
 
 function renderTasks() {
@@ -789,6 +803,7 @@ function renderTasks() {
     list.innerHTML = '';
     empty.style.display = 'block';
     progress.style.display = 'none';
+    updateTimerTaskSelect();
     return;
   }
   empty.style.display = 'none';
@@ -813,7 +828,11 @@ function renderTasks() {
   var priorityOrder = { high: 0, normal: 1, low: 2 };
   filtered.sort(function(a, b) {
     if (a.done !== b.done) return a.done ? 1 : -1;
-    if (sortBy === 'priority') return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
+    if (sortBy === 'priority') {
+      var pa = priorityOrder[a.priority] !== undefined ? priorityOrder[a.priority] : 1;
+      var pb = priorityOrder[b.priority] !== undefined ? priorityOrder[b.priority] : 1;
+      return pa - pb;
+    }
     if (sortBy === 'az') return a.title.localeCompare(b.title);
     // newest: higher createdAt first
     return new Date(b.createdAt) - new Date(a.createdAt);
@@ -851,6 +870,21 @@ function renderTasks() {
   var pct = total > 0 ? (done / total) * 100 : 0;
   document.getElementById('progressFill').style.width = pct + '%';
   document.getElementById('progressText').textContent = done + ' dari ' + total + ' tugas selesai';
+  updateTimerTaskSelect();
+}
+
+function updateTimerTaskSelect() {
+  var select = document.getElementById('timerTaskSelect');
+  if (!select) return;
+  var currentTaskId = state.timer.taskId;
+  var options = '<option value="">Fokus tanpa tugas tertentu</option>';
+  state.tasks.filter(function(x) { return !x.done; }).forEach(function(task) {
+    var sel = task.id === currentTaskId ? ' selected' : '';
+    options += '<option value="' + task.id + '"' + sel + '>' + escapeHtml(task.title) + '</option>';
+  });
+  select.innerHTML = options;
+  select.value = currentTaskId;
+  select.disabled = state.timer.running || state.timer.mode === 'break';
 }
 
 function renderTimer() {
@@ -869,8 +903,8 @@ function renderTimer() {
   document.getElementById('btnTimerStart').style.display = t.running ? 'none' : 'inline-flex';
   document.getElementById('btnTimerPause').style.display = t.running ? 'inline-flex' : 'none';
   document.getElementById('btnTimerResume').style.display = 'none';
-  // If paused (remaining < total and not running)
-  if (!t.running && t.remaining < t.total) {
+  // If paused (remaining < total, remaining > 0, not running)
+  if (!t.running && t.remaining < t.total && t.remaining > 0) {
     document.getElementById('btnTimerStart').style.display = 'none';
     document.getElementById('btnTimerResume').style.display = 'inline-flex';
   }
@@ -881,7 +915,7 @@ function renderTimer() {
   if (fs) fs.style.display = t.running ? 'none' : 'inline-flex';
   if (fp) fp.style.display = t.running ? 'inline-flex' : 'none';
   if (fr) fr.style.display = 'none';
-  if (fr && !t.running && t.remaining < t.total) {
+  if (fr && !t.running && t.remaining < t.total && t.remaining > 0) {
     if (fs) fs.style.display = 'none';
     if (fr) fr.style.display = 'inline-flex';
   }
@@ -1200,6 +1234,17 @@ function setupEventListeners() {
     else if (action === 'delete') { Tasks.remove(id); }
   });
 
+  // Task checkbox keyboard support (Space/Enter)
+  document.getElementById('taskList').addEventListener('keydown', function(e) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      var target = e.target.closest('[data-action="toggle"]');
+      if (target) {
+        e.preventDefault();
+        Tasks.toggle(target.dataset.id);
+      }
+    }
+  });
+
   // Empty state suggestions
   document.querySelectorAll('.btn-suggestion').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -1262,6 +1307,8 @@ function setupEventListeners() {
   document.getElementById('btnSettings').addEventListener('click', openSettings);
   document.getElementById('btnSettingsHeader').addEventListener('click', openSettings);
   document.getElementById('btnCloseSettings').addEventListener('click', closeSettings);
+  document.getElementById('btnSettingsSave').addEventListener('click', saveSettings);
+  document.getElementById('btnSettingsCancel').addEventListener('click', closeSettings);
   document.getElementById('settingsDialog').addEventListener('click', function(e) {
     if (e.target === this) closeSettings();
   });
@@ -1361,17 +1408,90 @@ function setupEventListeners() {
     if (!e.newValue) return;
     try {
       var data = JSON.parse(e.newValue);
-      if (!validateState(data)) {
+      if (!validateBackup(data)) {
         showToast('Data dari tab lain tidak valid.');
         return;
       }
       state = validateAndFill(data);
+      Theme.apply();
       renderAll();
       // Don't write back to prevent loop
     } catch(err) {
       showToast('Gagal membaca data dari tab lain.');
     }
   });
+}
+
+function isValidISODate(str) {
+  if (typeof str !== 'string' || str.length === 0) return false;
+  var d = new Date(str);
+  return !isNaN(d.getTime());
+}
+
+function validateBackup(data) {
+  if (!data || typeof data !== 'object') return false;
+  if (data.version !== 1) return false;
+  var s = data.settings;
+  if (!s || typeof s !== 'object') return false;
+  if (typeof s.name !== 'string' || s.name.length === 0 || s.name.length > 100) return false;
+  if (typeof s.focusMinutes !== 'number' || s.focusMinutes < 1 || s.focusMinutes > 120) return false;
+  if (typeof s.breakMinutes !== 'number' || s.breakMinutes < 1 || s.breakMinutes > 60) return false;
+  if (typeof s.goal !== 'number' || [2,4,6,8].indexOf(s.goal) < 0) return false;
+  if (typeof s.theme !== 'string' || ['light','dark','system'].indexOf(s.theme) < 0) return false;
+  if (typeof s.sound !== 'boolean') return false;
+  if (!Array.isArray(data.tasks)) return false;
+  var taskIds = {};
+  for (var i = 0; i < data.tasks.length; i++) {
+    var tk = data.tasks[i];
+    if (!tk || typeof tk !== 'object') return false;
+    if (typeof tk.id !== 'string' || tk.id.length === 0) return false;
+    if (taskIds[tk.id]) return false;
+    taskIds[tk.id] = true;
+    if (typeof tk.title !== 'string' || tk.title.trim().length === 0 || tk.title.length > 160) return false;
+    if (typeof tk.category !== 'string' || ['personal','belajar','kerja'].indexOf(tk.category) < 0) return false;
+    if (typeof tk.priority !== 'string' || ['high','normal','low'].indexOf(tk.priority) < 0) return false;
+    if (typeof tk.done !== 'boolean') return false;
+    if (typeof tk.createdAt !== 'string' || !isValidISODate(tk.createdAt)) return false;
+    if (tk.completedAt !== null && (typeof tk.completedAt !== 'string' || !isValidISODate(tk.completedAt))) return false;
+  }
+  if (!Array.isArray(data.links)) return false;
+  var linkIds = {};
+  for (var i = 0; i < data.links.length; i++) {
+    var l = data.links[i];
+    if (!l || typeof l !== 'object') return false;
+    if (typeof l.id !== 'string' || l.id.length === 0) return false;
+    if (linkIds[l.id]) return false;
+    linkIds[l.id] = true;
+    if (typeof l.name !== 'string' || l.name.length === 0 || l.name.length > 100) return false;
+    if (typeof l.url !== 'string' || l.url.length === 0) return false;
+    try {
+      var testUrl = /^https?:\/\//i.test(l.url) ? l.url : 'https://' + l.url;
+      var u = new URL(testUrl);
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+    } catch(e) { return false; }
+  }
+  if (!Array.isArray(data.sessions)) return false;
+  var sessionIds = {};
+  for (var i = 0; i < data.sessions.length; i++) {
+    var sess = data.sessions[i];
+    if (!sess || typeof sess !== 'object') return false;
+    if (typeof sess.id !== 'string' || sess.id.length === 0) return false;
+    if (sessionIds[sess.id]) return false;
+    sessionIds[sess.id] = true;
+    if (typeof sess.endedAt !== 'string' || !isValidISODate(sess.endedAt)) return false;
+    if (typeof sess.seconds !== 'number' || sess.seconds < 0 || sess.seconds > 86400) return false;
+    if (typeof sess.taskId !== 'string') return false;
+  }
+  var tm = data.timer;
+  if (!tm || typeof tm !== 'object') return false;
+  if (typeof tm.id !== 'string') return false;
+  if (typeof tm.mode !== 'string' || ['focus','break'].indexOf(tm.mode) < 0) return false;
+  if (typeof tm.total !== 'number' || tm.total < 0) return false;
+  if (typeof tm.remaining !== 'number' || tm.remaining < 0) return false;
+  if (typeof tm.running !== 'boolean') return false;
+  if (tm.endAt !== null && typeof tm.endAt !== 'number') return false;
+  if (typeof tm.taskId !== 'string') return false;
+  return true;
 }
 
 function validateState(data) {
@@ -1388,6 +1508,8 @@ function init() {
   Theme.apply();
   Theme.watchSystem();
   setupEventListeners();
+  var tzEl = document.getElementById('timezoneText');
+  if (tzEl) tzEl.textContent = getTimezoneLabel();
   renderAll();
 
   // Check if timer was running and may have completed during refresh
