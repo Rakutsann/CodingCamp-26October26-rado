@@ -1078,9 +1078,13 @@ function closeSettings() {
 }
 
 function saveSettings() {
-  var name = document.getElementById('settingName').value.trim() || 'Rado';
-  var focusMin = clamp(parseInt(document.getElementById('settingFocusMinutes').value) || 25, 1, 120);
-  var breakMin = clamp(parseInt(document.getElementById('settingBreakMinutes').value) || 5, 1, 60);
+  var name = document.getElementById('settingName').value.trim();
+  var focusMin = Number(document.getElementById('settingFocusMinutes').value);
+  var breakMin = Number(document.getElementById('settingBreakMinutes').value);
+  if (!name || name.length > 32 || !Number.isInteger(focusMin) || focusMin < 1 || focusMin > 120 || !Number.isInteger(breakMin) || breakMin < 1 || breakMin > 60) {
+    showToast('Isi nama dan durasi dalam rentang yang tersedia.');
+    return;
+  }
   var goalBtn = document.querySelector('.option-btn[data-goal].active');
   var goal = goalBtn ? parseInt(goalBtn.dataset.goal) : 4;
   var themeBtn = document.querySelector('.option-btn[data-theme-opt].active');
@@ -1093,10 +1097,10 @@ function saveSettings() {
   state.settings.goal = goal;
   state.settings.theme = theme;
   state.settings.sound = sound;
-  Store.save();
+  Timer.updateDurations();
+  if (!Store.save()) return;
   Theme.apply();
   updateGreeting();
-  Timer.updateDurations();
   renderTimer();
   renderStats();
   closeSettings();
