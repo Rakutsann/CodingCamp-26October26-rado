@@ -880,10 +880,10 @@ function renderTasks() {
     var focusCount = Tasks.focusCount(t.id);
     var actions = '';
     if (!t.done) {
-      actions += '<button class="task-action-btn" data-action="focus" data-id="' + escapeHtml(t.id) + '" title="Fokus" aria-label="Fokus">' + iconTimer() + '</button>';
+      actions += '<button class="task-action-btn" data-action="focus" data-id="' + escapeHtml(t.id) + '" title="Fokus" aria-label="Fokus">' + iconTimer() + '<span class="action-label">Fokus</span></button>';
     }
-    actions += '<button class="task-action-btn" data-action="edit" data-id="' + escapeHtml(t.id) + '" title="Edit" aria-label="Edit">' + iconEdit() + '</button>';
-    actions += '<button class="task-action-btn" data-action="delete" data-id="' + escapeHtml(t.id) + '" title="Hapus" aria-label="Hapus">' + iconDelete() + '</button>';
+    actions += '<button class="task-action-btn" data-action="edit" data-id="' + escapeHtml(t.id) + '" title="Edit" aria-label="Edit">' + iconEdit() + '<span class="action-label">Edit</span></button>';
+    actions += '<button class="task-action-btn" data-action="delete" data-id="' + escapeHtml(t.id) + '" title="Hapus" aria-label="Hapus">' + iconDelete() + '<span class="action-label">Hapus</span></button>';
 
     return '<div class="task-item' + (t.done ? ' done' : '') + '" data-id="' + escapeHtml(t.id) + '">' +
       '<div class="task-checkbox" data-action="toggle" data-id="' + escapeHtml(t.id) + '" role="checkbox" aria-checked="' + t.done + '" aria-label="' + escapeHtml((t.done ? 'Tandai belum selesai: ' : 'Selesaikan: ') + t.title) + '" tabindex="0">' +
@@ -1028,8 +1028,8 @@ function renderLinks() {
     return '<div class="shortcut-card" data-id="' + escapeHtml(l.id) + '">' +
       '<a class="shortcut-main" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener noreferrer" aria-label="' + escapeHtml('Buka ' + l.name + ' di tab baru') + '">' + icon +
       '<span class="shortcut-name">' + escapeHtml(l.name) + '</span><span class="shortcut-domain">' + escapeHtml(new URL(l.url).hostname) + ' ↗</span></a>' +
-      '<div class="shortcut-actions"><button class="shortcut-action-btn" data-link-action="edit" data-id="' + escapeHtml(l.id) + '" aria-label="' + escapeHtml('Edit ' + l.name) + '" title="Edit pintasan">' + iconEdit() + '</button>' +
-      '<button class="shortcut-action-btn" data-link-action="delete" data-id="' + escapeHtml(l.id) + '" aria-label="' + escapeHtml('Hapus ' + l.name) + '" title="Hapus pintasan">' + iconDelete() + '</button></div></div>';
+      '<div class="shortcut-actions"><button class="shortcut-action-btn" data-link-action="edit" data-id="' + escapeHtml(l.id) + '" aria-label="' + escapeHtml('Edit ' + l.name) + '" title="Edit pintasan">' + iconEdit() + '<span class="action-label">Edit</span></button>' +
+      '<button class="shortcut-action-btn" data-link-action="delete" data-id="' + escapeHtml(l.id) + '" aria-label="' + escapeHtml('Hapus ' + l.name) + '" title="Hapus pintasan">' + iconDelete() + '<span class="action-label">Hapus</span></button></div></div>';
   }).join('');
 }
 
@@ -1233,9 +1233,9 @@ var Navigation = {
     if (view === 'fokus') { FocusMode.open(); return; }
     var pages = {
       ringkasan: { label: 'Ringkasan', cards: ['tugas', 'fokus', 'aktivitas', 'pintasan'] },
-      tugas: { label: 'Daftar tugas', title: 'Dari rencana jadi selesai.', eyebrow: 'SATU PER SATU, TETAP MAJU', description: 'Atur tugas, tentukan prioritas, lalu tekan ikon fokus di tugas yang ingin kamu kerjakan.', cards: ['tugas'] },
-      aktivitas: { label: 'Aktivitas', title: 'Waktumu punya cerita.', eyebrow: 'LIHAT USAHA YANG SUDAH ADA', description: 'Lihat menit fokus selama 7 hari terakhir dan telusuri sesi yang sudah kamu selesaikan.', cards: ['aktivitas', 'riwayat'] },
-      pintasan: { label: 'Pintasan', title: 'Situs penting, satu klik.', eyebrow: 'JALAN PENDEK KE YANG KAMU PERLU', description: 'Buka situs di tab baru. Tambahkan tautanmu sendiri, atau rapikan daftar lewat tombol edit dan hapus.', cards: ['pintasan'] }
+      tugas: { label: 'Daftar tugas', title: 'Daftar tugas', eyebrow: 'SATU PER SATU, TETAP MAJU', description: 'Atur tugas, tentukan prioritas, lalu tekan ikon fokus di tugas yang ingin kamu kerjakan.', cards: ['tugas'] },
+      aktivitas: { label: 'Aktivitas', title: 'Aktivitas fokus', eyebrow: 'LIHAT USAHA YANG SUDAH ADA', description: 'Lihat menit fokus selama 7 hari terakhir dan telusuri sesi yang sudah kamu selesaikan.', cards: ['aktivitas', 'riwayat'] },
+      pintasan: { label: 'Pintasan', title: 'Pintasan', eyebrow: 'JALAN PENDEK KE YANG KAMU PERLU', description: 'Buka situs di tab baru. Tambahkan tautanmu sendiri, atau rapikan daftar lewat tombol edit dan hapus.', cards: ['pintasan'] }
     };
     if (!pages[view]) view = 'ringkasan';
     var page = pages[view];
