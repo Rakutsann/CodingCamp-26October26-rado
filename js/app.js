@@ -1166,12 +1166,13 @@ function saveTaskDetail() {
   var category = document.getElementById('taskCategoryInput').value;
   var priority = document.getElementById('taskPriorityInput').value;
   if (!title) return;
+  var saved;
   if (editingTaskId) {
-    Tasks.edit(editingTaskId, { title: title.slice(0, 160), category: category, priority: priority });
+    saved = Tasks.edit(editingTaskId, { title: title.slice(0, 160), category: category, priority: priority });
   } else {
-    Tasks.add(title, category, priority);
+    saved = Tasks.add(title, category, priority);
   }
-  closeTaskDetail();
+  if (saved) closeTaskDetail();
 }
 
 // ==================== SHORTCUT DIALOG ====================
