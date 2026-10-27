@@ -981,7 +981,7 @@ function renderActivity() {
   var maxMins = Math.max.apply(null, weekly.map(function(d) { return d.minutes; }));
   var dayLabels = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
   var html = weekly.map(function(d) {
-    var date = new Date(d.date);
+    var date = new Date(d.date + 'T12:00:00');
     var label = dayLabels[date.getDay()];
     var height = maxMins > 0 ? (d.minutes / maxMins) * 100 : 0;
     return '<div class="bar-day">' +
