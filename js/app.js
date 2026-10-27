@@ -11,7 +11,6 @@ var timerInterval = null;
 var clockInterval = null;
 var dateCheckInterval = null;
 var audioCtx = null;
-var undoDelete = null; // { task, timeoutId }
 var lastDateStr = '';
 var storageReadBlocked = false;
 
@@ -339,6 +338,7 @@ var Tasks = {
     } else if (updates.done === false) {
       t.completedAt = null;
     }
+    if (t.done && state.timer.taskId === id) state.timer.taskId = '';
     Store.save();
     renderTasks();
     renderStats();
@@ -364,6 +364,7 @@ var Tasks = {
       t.done = false;
       t.completedAt = null;
     }
+    if (t.done && state.timer.taskId === id) state.timer.taskId = '';
     Store.save();
     renderTasks();
     renderStats();
@@ -372,23 +373,25 @@ var Tasks = {
     var idx = state.tasks.findIndex(function(x) { return x.id === id; });
     if (idx < 0) return;
     var removed = state.tasks[idx];
+    var wasFocused = state.timer.taskId === id;
+    var timerId = state.timer.id;
     state.tasks.splice(idx, 1);
+    if (wasFocused) state.timer.taskId = '';
     Store.save();
     renderTasks();
     renderStats();
     // Undo
-    if (undoDelete) clearTimeout(undoDelete.timeoutId);
-    undoDelete = { task: removed, timeoutId: null };
-    var toast = showToast('Tugas dihapus.', 'Urungkan', function() {
-      if (undoDelete && undoDelete.task) {
-        state.tasks.splice(Math.min(idx, state.tasks.length), 0, undoDelete.task);
-        Store.save();
-        renderTasks();
-        renderStats();
-        undoDelete = null;
-      }
+    var canUndo = true;
+    showToast('Tugas dihapus.', 'Urungkan', function() {
+      if (!canUndo || state.tasks.some(function(t) { return t.id === removed.id; })) return;
+      canUndo = false;
+      state.tasks.splice(Math.min(idx, state.tasks.length), 0, removed);
+      if (wasFocused && !removed.done && !state.timer.taskId && state.timer.id === timerId) state.timer.taskId = id;
+      Store.save();
+      renderTasks();
+      renderStats();
     });
-    undoDelete.timeoutId = setTimeout(function() { undoDelete = null; }, 8000);
+    setTimeout(function() { canUndo = false; }, 8000);
   },
   focusCount: function(taskId) {
     if (!taskId) return 0;
@@ -914,6 +917,8 @@ function updateTimerTaskSelect() {
   select.innerHTML = options;
   select.value = currentTaskId;
   select.disabled = state.timer.running || state.timer.mode === 'break';
+  var task = state.tasks.find(function(t) { return t.id === currentTaskId && !t.done; });
+  document.getElementById('focusTaskName').textContent = task ? task.title : 'Fokus tanpa tugas tertentu';
 }
 
 function renderTimer() {
@@ -950,24 +955,7 @@ function renderTimer() {
     if (fs) fs.style.display = 'none';
     if (fr) fr.style.display = 'inline-flex';
   }
-  // Task select
-  var select = document.getElementById('timerTaskSelect');
-  select.disabled = t.running || t.mode === 'break';
-  // Populate options
-  var currentTaskId = t.taskId;
-  var options = '<option value="">Fokus tanpa tugas tertentu</option>';
-  state.tasks.filter(function(x) { return !x.done; }).forEach(function(task) {
-    var sel = task.id === currentTaskId ? ' selected' : '';
-    options += '<option value="' + escapeHtml(task.id) + '"' + sel + '>' + escapeHtml(task.title) + '</option>';
-  });
-  select.innerHTML = options;
-  select.value = currentTaskId;
-  // Focus overlay task name
-  var focusName = document.getElementById('focusTaskName');
-  if (focusName) {
-    var task = state.tasks.find(function(x) { return x.id === currentTaskId; });
-    focusName.textContent = task ? task.title : 'Fokus tanpa tugas tertentu';
-  }
+  updateTimerTaskSelect();
   // Start/stop tick
   if (t.running && !timerInterval) startTimerTick();
   if (!t.running && timerInterval) stopTimerTick();
