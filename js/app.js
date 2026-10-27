@@ -1441,7 +1441,10 @@ function setupEventListeners() {
         return;
       }
       var target = document.getElementById(section);
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (target) target.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start'
+      });
     });
   });
 

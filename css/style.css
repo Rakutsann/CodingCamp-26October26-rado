@@ -97,6 +97,7 @@ svg { display: block; }
 
 /* ==================== MAIN ==================== */
 .main { margin-left: var(--sidebar-w); min-height: 100vh; transition: margin-left 0.2s ease; }
+.main section[id] { scroll-margin-top: calc(var(--header-h) + 16px); }
 
 /* ==================== HEADER ==================== */
 .header {
