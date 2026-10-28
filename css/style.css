@@ -461,6 +461,38 @@ input, select { min-width: 0; }
   .main[data-view="ringkasan"] .card-tasks .task-list:empty { flex: 0 0 auto; }
   .main[data-view="ringkasan"] .card-tasks .empty-state { margin-block: auto; }
   .main[data-view="ringkasan"] .card-tasks .task-progress { flex-shrink: 0; }
+  .main[data-view="tugas"] {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 650px;
+  }
+  .main[data-view="tugas"] .grid {
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+  }
+  .main[data-view="tugas"] .dashboard-column { min-height: 0; }
+  .main[data-view="tugas"] .card-tasks {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .main[data-view="tugas"] .task-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-secondary) transparent;
+    scrollbar-gutter: stable;
+  }
+  .main[data-view="tugas"] .task-list:empty { flex: 0 0 auto; }
+  .main[data-view="tugas"] .empty-state { margin-block: auto; }
+  .main[data-view="tugas"] .task-progress { flex-shrink: 0; }
 }
 @media (min-width: 641px) {
   .main[data-view="tugas"] .task-action-btn { width: auto; padding: 6px 8px; gap: 6px; font-size: 0.75rem; }
