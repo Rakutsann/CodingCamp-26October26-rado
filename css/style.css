@@ -369,6 +369,39 @@ input, select { min-width: 0; }
 .view-intro h1 { font-family: 'Manrope', sans-serif; font-size: 1.8rem; line-height: 1.25; letter-spacing: -0.035em; }
 .view-intro p { color: var(--text-secondary); margin-top: 10px; max-width: 620px; font-size: 0.9rem; }
 .main[data-view="ringkasan"] .shortcuts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.main[data-view="ringkasan"] .card-activity,
+.main[data-view="ringkasan"] .card-shortcuts {
+  height: 360px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.main[data-view="ringkasan"] .card-activity .activity-chart {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+.main[data-view="ringkasan"] .card-shortcuts .card-description,
+.main[data-view="ringkasan"] .card-activity .activity-hint { flex-shrink: 0; }
+.main[data-view="ringkasan"] .card-shortcuts .shortcuts-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  align-content: start;
+  grid-auto-rows: max-content;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-secondary) transparent;
+  scrollbar-gutter: stable;
+  padding: 2px 4px 2px 2px;
+}
+.main[data-view="ringkasan"] .card-shortcuts .shortcut-card,
+.main[data-view="ringkasan"] .card-shortcuts .shortcut-main,
+.main[data-view="ringkasan"] .card-shortcuts .shortcut-name { min-width: 0; }
+.main[data-view="ringkasan"] .card-activity > .text-button,
+.main[data-view="ringkasan"] .card-shortcuts > .text-button { margin-top: auto; flex-shrink: 0; }
+.main[data-view="ringkasan"] .shortcuts-grid > .card-description { grid-column: 1 / -1; }
 .main[data-view="tugas"] .grid, .main[data-view="pintasan"] .grid { grid-template-columns: minmax(0, 1fr); }
 .main[data-view="tugas"] .task-list { max-height: none; }
 .main[data-view="tugas"] .task-item { padding: 16px 8px; }
@@ -438,6 +471,8 @@ input, select { min-width: 0; }
 /* <=640px: sidebar hidden, single column, settings in header */
 @media (max-width: 640px) {
   :root { --sidebar-w: 0; }
+  .main[data-view="ringkasan"] .card-activity,
+  .main[data-view="ringkasan"] .card-shortcuts { height: 340px; }
   .sidebar { display: none; }
   .main { margin-left: 0; }
   .header { padding: 0 16px; }
