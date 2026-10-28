@@ -522,13 +522,15 @@ input, select { min-width: 0; }
   }
   .main[data-view="pintasan"] .shortcuts-grid > .card-description { grid-column: 1 / -1; }
   .main[data-view="aktivitas"] .activity-chart {
-    flex: 1;
+    flex: 0 1 clamp(150px, 28dvh, 240px);
     height: auto;
     min-height: 0;
-    max-height: 280px;
-    margin-block: auto;
+    margin-top: auto;
+    margin-bottom: 0;
   }
-  .main[data-view="aktivitas"] .activity-hint { flex-shrink: 0; }
+  .main[data-view="aktivitas"] .activity-hint {
+    flex-shrink: 0;
+  }
   .main[data-view="aktivitas"] .session-history {
     display: flex;
     flex: 1;
