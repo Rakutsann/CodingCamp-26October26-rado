@@ -23,7 +23,7 @@ Tidak perlu instalasi dependensi apa pun. Server lokal disarankan agar penyimpan
 - **Pintasan** menampilkan situs tersimpan beserta alamat dan kontrol edit/hapus. Tautan memakai elemen link yang dapat digunakan lewat keyboard dan meminta browser membuka tab baru.
 - **Ruang fokus** membuka timer penuh. Sesi yang sedang berjalan atau dijeda juga dapat dibuka lewat tombol timer ringkas di header.
 
-Menu di HP tersedia di bawah header. Tombol Kembali browser mengikuti pergantian halaman. Identitas profil ditampilkan sekali di sidebar; pengaturan di HP tersedia di header.
+Di desktop, tombol di kanan logo `ruang.` mengecilkan sidebar menjadi deretan ikon dan dapat membukanya kembali. Pilihan ini diingat oleh browser. Pada layar sedang sidebar otomatis memakai ikon; menu di HP tersedia di bawah header. Tombol Kembali browser mengikuti pergantian halaman. Identitas profil ditampilkan sekali di sidebar; pengaturan di HP tersedia di header.
 
 ## Fitur
 
@@ -66,6 +66,8 @@ Seluruh data disimpan di Local Storage browser dengan kunci `ruang:v1`:
 - `links`: pintasan favorit
 - `sessions`: riwayat sesi fokus yang selesai
 - `timer`: snapshot timer saat ini
+
+Pilihan ukuran sidebar disimpan terpisah dengan kunci `ruang:sidebar-collapsed` agar tidak mengubah isi cadangan tugas dan sesi.
 
 ## Perilaku Timer dan Pemulihan
 

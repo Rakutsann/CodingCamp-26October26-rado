@@ -43,6 +43,8 @@ Diuji langsung di browser bawaan Codex, dengan server statis lokal dan data uji:
 - Timer tetap berjalan selama berpindah halaman dan setelah refresh. Tombol timer di header membuka kontrol sesi; Jeda/Reset berfungsi.
 - Tidak ada pesan error atau warning JavaScript pada pemeriksaan akhir tab uji.
 
+Tambahan setelah fitur sidebar ringkas: tombol di kanan logo diuji pada lebar 1334 dan 1024 piksel. Sidebar menyusut ke 76 piksel, label dan avatar tersembunyi, ikon Aktivitas tetap membuka halamannya, dan ikon Pengaturan tetap membuka dialog. Tombol dapat memperluas sidebar lagi; pilihan ringkas bertahan setelah refresh. Pada lebar 1020 piksel sidebar otomatis menjadi ikon tanpa tombol, sedangkan pada 390 piksel navigasi HP tetap tampil tanpa halaman melebar. Tampilan ringkas juga diperiksa pada tema gelap.
+
 ## Pemeriksaan desain
 
 - Keseimbangan: kartu disusun dalam dua kolom mandiri; pintasan ringkasan memakai ubin ringkas agar bobotnya seimbang dengan tugas, timer, dan grafik.

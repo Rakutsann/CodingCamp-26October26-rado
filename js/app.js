@@ -3,7 +3,7 @@
 
 // ==================== CONSTANTS ====================
 var STORAGE_KEY = 'ruang:v1';
-var SIDEBAR_WIDTHS = { full: 224, medium: 195, icon: 76 };
+var SIDEBAR_KEY = 'ruang:sidebar-collapsed';
 
 // ==================== STATE ====================
 var state = null;
@@ -91,6 +91,27 @@ function setStorageStatus(saved) {
   indicator.querySelector('.storage-text').textContent = saved ? 'Tersimpan' : 'Belum tersimpan';
   indicator.title = saved ? 'Data tersimpan di browser ini' : 'Perubahan belum tersimpan. Ekspor cadangan sebelum menutup halaman.';
 }
+
+var Sidebar = {
+  collapsed: false,
+  init: function() {
+    try { this.collapsed = localStorage.getItem(SIDEBAR_KEY) === 'true'; } catch(e) { /* Layout tetap bisa dipakai. */ }
+    this.apply();
+  },
+  apply: function() {
+    document.documentElement.classList.toggle('sidebar-collapsed', this.collapsed);
+    var button = document.getElementById('btnSidebarToggle');
+    var label = this.collapsed ? 'Perluas sidebar' : 'Kecilkan sidebar';
+    button.setAttribute('aria-expanded', String(!this.collapsed));
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  },
+  toggle: function() {
+    this.collapsed = !this.collapsed;
+    this.apply();
+    try { localStorage.setItem(SIDEBAR_KEY, String(this.collapsed)); } catch(e) { /* Pilihan hanya bertahan di tab ini. */ }
+  }
+};
 
 // ==================== MIGRATION ====================
 function migrate(data) {
@@ -1271,6 +1292,7 @@ var Navigation = {
 var currentFilter = 'all';
 
 function setupEventListeners() {
+  document.getElementById('btnSidebarToggle').addEventListener('click', function() { Sidebar.toggle(); });
   // Quick input
   var qi = document.getElementById('quickInput');
   qi.addEventListener('keydown', function(e) {
@@ -1497,6 +1519,11 @@ function setupEventListeners() {
 
   // Cross-tab sync
   window.addEventListener('storage', function(e) {
+    if (e.key === SIDEBAR_KEY) {
+      Sidebar.collapsed = e.newValue === 'true';
+      Sidebar.apply();
+      return;
+    }
     if (e.key !== STORAGE_KEY) return;
     if (!e.newValue) return;
     try {
@@ -1586,6 +1613,7 @@ function validateState(data) {
 function init() {
   state = Store.load();
   lastDateStr = todayStr();
+  Sidebar.init();
   Theme.apply();
   Theme.watchSystem();
   setupEventListeners();
