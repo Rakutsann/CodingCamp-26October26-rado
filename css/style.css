@@ -80,10 +80,11 @@ svg { display: block; }
 .sidebar-toggle {
   width: 32px; height: 32px; flex: 0 0 32px; margin-left: auto;
   display: grid; place-items: center;
-  border-radius: 8px; color: var(--text-secondary);
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--sage); color: var(--text);
   transition: background 0.15s, color 0.15s;
 }
-.sidebar-toggle:hover { background: var(--sage); color: var(--text); }
+.sidebar-toggle:hover, .sidebar-toggle:focus-visible { background: var(--btn-primary); color: var(--on-primary); }
 .sidebar-toggle svg { transition: transform 0.2s ease; }
 .logo-text { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 1.25rem; color: var(--text); letter-spacing: -0.02em; }
 .logo-dot { color: var(--terracotta); }
@@ -117,9 +118,12 @@ svg { display: block; }
 @media (min-width: 1021px) {
   html.sidebar-collapsed { --sidebar-w: 76px; }
   html.sidebar-collapsed .sidebar { padding: 16px 8px; align-items: center; }
-  html.sidebar-collapsed .sidebar-logo { justify-content: space-between; gap: 4px; padding: 0; }
-  html.sidebar-collapsed .sidebar-logo > svg { width: 24px; height: 24px; }
-  html.sidebar-collapsed .sidebar-toggle { margin-left: 0; }
+  html.sidebar-collapsed .sidebar-logo { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; }
+  html.sidebar-collapsed .sidebar-logo > svg { grid-area: 1 / 1; width: 28px; height: 28px; transition: opacity 0.15s ease; }
+  html.sidebar-collapsed .sidebar-toggle { grid-area: 1 / 1; width: 36px; height: 36px; margin: 0; opacity: 0; }
+  html.sidebar-collapsed .sidebar-logo:hover > svg { opacity: 0; }
+  html.sidebar-collapsed .sidebar-logo:hover .sidebar-toggle,
+  html.sidebar-collapsed .sidebar-toggle:focus-visible { opacity: 1; }
   html.sidebar-collapsed .sidebar-logo .logo-text,
   html.sidebar-collapsed .sidebar .menu-text,
   html.sidebar-collapsed .sidebar .menu-badge,

@@ -45,6 +45,8 @@ Diuji langsung di browser bawaan Codex, dengan server statis lokal dan data uji:
 
 Tambahan setelah fitur sidebar ringkas: tombol di kanan logo diuji pada lebar 1334 dan 1024 piksel. Sidebar menyusut ke 76 piksel, label dan avatar tersembunyi, ikon Aktivitas tetap membuka halamannya, dan ikon Pengaturan tetap membuka dialog. Tombol dapat memperluas sidebar lagi; pilihan ringkas bertahan setelah refresh. Pada lebar 1020 piksel sidebar otomatis menjadi ikon tanpa tombol, sedangkan pada 390 piksel navigasi HP tetap tampil tanpa halaman melebar. Tampilan ringkas juga diperiksa pada tema gelap.
 
+Penyempurnaan logo ringkas: setelah mengecilkan sidebar, logo terlihat sendiri. Saat kursor diarahkan ke logo, logo berganti menjadi tombol buka dengan latar penuh; setelah kursor menjauh, logo muncul kembali. Tombol tersebut berhasil membuka sidebar. Latar tombol saat sidebar lebar dan warna tombol pada tema gelap diperiksa di browser. Lebar 1024 dan 390 piksel tetap tanpa gulir mendatar.
+
 ## Pemeriksaan desain
 
 - Keseimbangan: kartu disusun dalam dua kolom mandiri; pintasan ringkasan memakai ubin ringkas agar bobotnya seimbang dengan tugas, timer, dan grafik.
