@@ -461,19 +461,25 @@ input, select { min-width: 0; }
   .main[data-view="ringkasan"] .card-tasks .task-list:empty { flex: 0 0 auto; }
   .main[data-view="ringkasan"] .card-tasks .empty-state { margin-block: auto; }
   .main[data-view="ringkasan"] .card-tasks .task-progress { flex-shrink: 0; }
-  .main[data-view="tugas"] {
+  .main[data-view="tugas"],
+  .main[data-view="pintasan"],
+  .main[data-view="aktivitas"] {
     display: flex;
     flex-direction: column;
     height: 100vh;
     height: 100dvh;
     min-height: 650px;
   }
-  .main[data-view="tugas"] .grid {
+  .main[data-view="tugas"] .grid,
+  .main[data-view="pintasan"] .grid,
+  .main[data-view="aktivitas"] .grid {
     flex: 1;
     min-height: 0;
     align-items: stretch;
   }
-  .main[data-view="tugas"] .dashboard-column { min-height: 0; }
+  .main[data-view="tugas"] .dashboard-column,
+  .main[data-view="pintasan"] .dashboard-column,
+  .main[data-view="aktivitas"] .dashboard-column { min-height: 0; }
   .main[data-view="tugas"] .card-tasks {
     display: flex;
     flex: 1;
@@ -493,6 +499,49 @@ input, select { min-width: 0; }
   .main[data-view="tugas"] .task-list:empty { flex: 0 0 auto; }
   .main[data-view="tugas"] .empty-state { margin-block: auto; }
   .main[data-view="tugas"] .task-progress { flex-shrink: 0; }
+  .main[data-view="pintasan"] .card-shortcuts,
+  .main[data-view="aktivitas"] .card-activity,
+  .main[data-view="aktivitas"] .card-history {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .main[data-view="pintasan"] .shortcuts-grid {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    align-content: start;
+    grid-auto-rows: max-content;
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-secondary) transparent;
+    scrollbar-gutter: stable;
+    padding: 2px 4px 2px 2px;
+  }
+  .main[data-view="pintasan"] .shortcuts-grid > .card-description { grid-column: 1 / -1; }
+  .main[data-view="aktivitas"] .activity-chart {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    max-height: 280px;
+    margin-block: auto;
+  }
+  .main[data-view="aktivitas"] .activity-hint { flex-shrink: 0; }
+  .main[data-view="aktivitas"] .session-history {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-secondary) transparent;
+    scrollbar-gutter: stable;
+  }
+  .main[data-view="aktivitas"] .session-row { flex-shrink: 0; }
+  .main[data-view="aktivitas"] .history-empty { margin-block: auto; }
 }
 @media (min-width: 641px) {
   .main[data-view="tugas"] .task-action-btn { width: auto; padding: 6px 8px; gap: 6px; font-size: 0.75rem; }
